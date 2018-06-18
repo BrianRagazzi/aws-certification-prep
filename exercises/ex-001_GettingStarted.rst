@@ -36,9 +36,10 @@ Install **git** and **virtualenv**, if you don't already have them installed.
 - **virtualenv** is used to to manage Python packages for different projects. Using virtualenv allows you to avoid installing Python packages globally which could break system tools or other projects. You can install virtualenv using pip.
 
 On Ubuntu, you'll simply run
+
 .. code-block::
 
-	sudo apt-get install git virtualenv 
+	sudo apt-get install git virtualenv
 
 Here are the links:
 
@@ -50,6 +51,7 @@ Clone this GitHub repo
 .. code-block::
 
 	git clone git@github.com:addr2data/aws-certification-prep.git
+
 
 If you don't have your SSH key(s) added GitHub, you can use HTTP instead.
 
