@@ -61,6 +61,8 @@ If you don't have your SSH key(s) added GitHub, you can use HTTP instead.
 
 Set up your virtual environment
 --------------------------------
+These commands set up a virtual environment for isolation of python packages by project and enable python commands from BASH
+
 
 .. code-block::
 
@@ -71,6 +73,7 @@ Set up your virtual environment
 
 Install requirements
 --------------------
+Be sure that your command prompt begins with **(aws-certification-prep)**, which indicates that you are in the correct python virtual environment
 
 .. code-block::
 
@@ -79,20 +82,21 @@ Install requirements
 Set up a user account for API access
 ------------------------------------
 - Login to your AWS account.
-- Under services select **IAM**.
+- Under Services / Security, Identity & Compliance select **IAM**.
 - Select **users**
 - Click **Add user**
 - Under **Set user details**, enter user name **apiuser01**.
-- Under **Select AWS access type**, select **Programmatic access**.
-- Click on **Next: Permissions**.
+- Under **Select AWS access type**, select **Programmatic access**.  This account does not require AWS Management Console access.
+- Click **Next: Permissions**.
 - Under **Set permissions for apiuser01**, select **Attach existing policies directly**.
 - Search for **AmazonEC2FullAccess**, then select **AmazonEC2FullAccess** (we will add access to other services later).
-- Click on **Next: Review**.
+- Click **Next: Review**.
 - Click **Create user**.
-- On the following screen, copy the values for **Access key ID** and **Secret access key**.
+- On the following screen, copy the values for **Access key ID** and **Secret access key**.  You'll have to click the **Show** link in order to display teh actual Secret Key value.  Once copied and saved, click **Close**
 
 Create a credentials file
 -------------------------
+Back on our workstation, we'll set up the tools to automatically authenticate using the account we just set up
 
 .. code-block::
 
@@ -114,59 +118,13 @@ Create a configuration file
 
 	vi ~/.aws/config
 
-Insert the appropriate region for your location (see **AWS Regions** table below).
+Insert the appropriate region for your location (see the URL where you logged into the AWS Console above.  For example **us-east-2**).
 
 .. code-block::
 
     [default]
     region = YOUR_REGION
     output = json
-
-AWS Regions
-~~~~~~~~~~~
-.. list-table::
-   :widths: 25, 25, 25, 25
-   :header-rows: 1
-
-   * - Code
-     - Name
-     - Code
-     - Name
-   * - us-east-1
-     - US East (N. Virginia)
-     - us-east-2
-     - US East (Ohio)
-   * - us-west-1
-     - UUS West (N. California)
-     - us-west-2
-     - US West (Oregon)
-   * - ca-central-1
-     - Canada (Central)
-     - eu-central-1
-     - EU (Frankfurt)
-   * - eu-west-1
-     - EU (Ireland)
-     - eu-west-2
-     - EU (London)
-   * - eu-west-3
-     - EU (Paris)
-     - ap-northeast-1
-     - Asia Pacific (Tokyo)
-   * - ap-northeast-2
-     - Asia Pacific (Seoul)
-     - ap-northeast-3
-     - Asia Pacific (Osaka-Local)
-   * - ap-southeast-1
-     - Asia Pacific (Singapore)
-     - ap-southeast-2
-     - Asia Pacific (Sydney)
-   * - ap-south-1
-     - Asia Pacific (Mumbai)
-     - sa-east-1
-     - South America (São Paulo)
-
-*Note: These regions are valid as of 06/13/18. Please use the following link to see the most up to list of regions*
-https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html
 
 
 Verify access
@@ -176,6 +134,10 @@ Use the following awscli command to verify that you are able to access the EC2 A
 .. code-block::
 
 	aws ec2 describe-regions
+
+Should return the list of regions formatted in json:
+
+.. code-block::
 
     {
         "Regions": [
@@ -187,50 +149,7 @@ Use the following awscli command to verify that you are able to access the EC2 A
                 "Endpoint": "ec2.eu-west-3.amazonaws.com",
                 "RegionName": "eu-west-3"
             },
-            {
-                "Endpoint": "ec2.eu-west-2.amazonaws.com",
-                "RegionName": "eu-west-2"
-            },
-            {
-                "Endpoint": "ec2.eu-west-1.amazonaws.com",
-                "RegionName": "eu-west-1"
-            },
-            {
-                "Endpoint": "ec2.ap-northeast-2.amazonaws.com",
-                "RegionName": "ap-northeast-2"
-            },
-            {
-                "Endpoint": "ec2.ap-northeast-1.amazonaws.com",
-                "RegionName": "ap-northeast-1"
-            },
-            {
-                "Endpoint": "ec2.sa-east-1.amazonaws.com",
-                "RegionName": "sa-east-1"
-            },
-            {
-                "Endpoint": "ec2.ca-central-1.amazonaws.com",
-                "RegionName": "ca-central-1"
-            },
-            {
-                "Endpoint": "ec2.ap-southeast-1.amazonaws.com",
-                "RegionName": "ap-southeast-1"
-            },
-            {
-                "Endpoint": "ec2.ap-southeast-2.amazonaws.com",
-                "RegionName": "ap-southeast-2"
-            },
-            {
-                "Endpoint": "ec2.eu-central-1.amazonaws.com",
-                "RegionName": "eu-central-1"
-            },
-            {
-                "Endpoint": "ec2.us-east-1.amazonaws.com",
-                "RegionName": "us-east-1"
-            },
-            {
-                "Endpoint": "ec2.us-east-2.amazonaws.com",
-                "RegionName": "us-east-2"
-            },
+            <--- SNIP --->
             {
                 "Endpoint": "ec2.us-west-1.amazonaws.com",
                 "RegionName": "us-west-1"
@@ -248,7 +167,13 @@ Using the **'--dry-run'** option lets you verify access without actually runninn
 
     aws ec2 describe-regions --dry-run
 
+Will result in 
+
+.. code-block::
+
     An error occurred (DryRunOperation) when calling the DescribeRegions operation: Request would have succeeded, but DryRun flag is set.
+    
+The dry-run option does do anything of value for this command, but later when we issue commands that make changes, it's useful to perform a check before the actual run
 
 Verify restriction
 ------------------
@@ -257,8 +182,14 @@ Use the following awscli command to verify that you NOT are able to access the I
 .. code-block::
 
     aws iam get-account-summary
+    
+Should result in 
+
+.. code-block::
 
     An error occurred (AccessDenied) when calling the GetAccountSummary operation: User: arn:aws:iam::926075045128:user/apiuser01 is not authorized to perform: iam:GetAccountSummary on resource: *
+
+This is the expected result since we did not grant our apiuser account permissions to IAM
 
 Formatting output
 -----------------
@@ -268,25 +199,25 @@ Use the following awscli command with **'--output text'** and **'--output table'
 
     aws ec2 describe-regions --output text
 
+Will produce results that look like
+
+.. code-block::
+
     REGIONS ec2.ap-south-1.amazonaws.com    ap-south-1
     REGIONS ec2.eu-west-3.amazonaws.com eu-west-3
-    REGIONS ec2.eu-west-2.amazonaws.com eu-west-2
-    REGIONS ec2.eu-west-1.amazonaws.com eu-west-1
-    REGIONS ec2.ap-northeast-2.amazonaws.com    ap-northeast-2
-    REGIONS ec2.ap-northeast-1.amazonaws.com    ap-northeast-1
-    REGIONS ec2.sa-east-1.amazonaws.com sa-east-1
-    REGIONS ec2.ca-central-1.amazonaws.com  ca-central-1
-    REGIONS ec2.ap-southeast-1.amazonaws.com    ap-southeast-1
-    REGIONS ec2.ap-southeast-2.amazonaws.com    ap-southeast-2
-    REGIONS ec2.eu-central-1.amazonaws.com  eu-central-1
-    REGIONS ec2.us-east-1.amazonaws.com us-east-1
-    REGIONS ec2.us-east-2.amazonaws.com us-east-2
+
+    <--- SNIP --->
+
     REGIONS ec2.us-west-1.amazonaws.com us-west-1
     REGIONS ec2.us-west-2.amazonaws.com us-west-2
 
 .. code-block::
 
     aws ec2 describe-regions --output table
+
+Will produce results that look like
+
+.. code-block::
 
     ----------------------------------------------------------
     |                     DescribeRegions                    |
@@ -297,20 +228,12 @@ Use the following awscli command with **'--output text'** and **'--output table'
     |+-----------------------------------+------------------+|
     ||  ec2.ap-south-1.amazonaws.com     |  ap-south-1      ||
     ||  ec2.eu-west-3.amazonaws.com      |  eu-west-3       ||
-    ||  ec2.eu-west-2.amazonaws.com      |  eu-west-2       ||
-    ||  ec2.eu-west-1.amazonaws.com      |  eu-west-1       ||
-    ||  ec2.ap-northeast-2.amazonaws.com |  ap-northeast-2  ||
-    ||  ec2.ap-northeast-1.amazonaws.com |  ap-northeast-1  ||
-    ||  ec2.sa-east-1.amazonaws.com      |  sa-east-1       ||
-    ||  ec2.ca-central-1.amazonaws.com   |  ca-central-1    ||
-    ||  ec2.ap-southeast-1.amazonaws.com |  ap-southeast-1  ||
-    ||  ec2.ap-southeast-2.amazonaws.com |  ap-southeast-2  ||
-    ||  ec2.eu-central-1.amazonaws.com   |  eu-central-1    ||
-    ||  ec2.us-east-1.amazonaws.com      |  us-east-1       ||
-    ||  ec2.us-east-2.amazonaws.com      |  us-east-2       ||
+    <--- SNIP --->
     ||  ec2.us-west-1.amazonaws.com      |  us-west-1       ||
     ||  ec2.us-west-2.amazonaws.com      |  us-west-2       ||
     |+-----------------------------------+------------------+|
+
+The **--output** options are valuable in overriding the json output option we set as default in the ~/.aws/config file
 
 Filtering results
 -----------------
@@ -320,35 +243,29 @@ Use the following awscli command with **'--query'** option to filter results.
 
     aws ec2 describe-regions --query Regions[*].RegionName
 
+Indicates that only the RegionName value of the Regions set should be return and produces results that look like
+
+.. code-block::
+
     [
         "ap-south-1",
         "eu-west-3",
-        "eu-west-2",
-        "eu-west-1",
-        "ap-northeast-2",
-        "ap-northeast-1",
-        "sa-east-1",
-        "ca-central-1",
-        "ap-southeast-1",
-        "ap-southeast-2",
-        "eu-central-1",
-        "us-east-1",
-        "us-east-2",
+         <--- SNIP --->
         "us-west-1",
         "us-west-2"
     ]
 
+Another use of the query subcommand is to return values for only records that match your criteria, for example
 .. code-block::
 
-    aws ec2 describe-regions --query Regions[*].RegionName --output text
-
-    ap-south-1  eu-west-3   eu-west-2   eu-west-1   ap-northeast-2  ap-northeast-1  sa-east-1   ca-central-1    ap-southeast-1  ap-southeast-2  eu-central-1    us-east-1   us-east-2   us-west-1   us-west-2
+     aws ec2 describe-regions --query 'Regions[?RegionName==`us-east-2`].Endpoint' --output text
+     
+Indicates that the Endpoint value for the Regions whose RegionName is **us-east-2** is returned in text format, 
 
 .. code-block::
 
-    aws ec2 describe-regions --query Regions[0].RegionName --output text
+	ec2.us-east-2.amazonaws.com
 
-    ap-south-1
 
 Explore your Region
 -------------------
