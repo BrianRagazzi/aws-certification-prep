@@ -378,7 +378,7 @@ Output from this script should look like
     us-west-1                (us-west-1a, us-west-1b)
     us-west-2                (us-west-2a, us-west-2b, us-west-2c)
 
-BASH and jq option:  Run this script to produce a list of regions and the Availabilty Zones for each
+**BASH and jq option**:  Run this script to produce a list of regions and the Availabilty Zones for each
 
 .. code-block::
 
