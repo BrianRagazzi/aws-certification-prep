@@ -34,17 +34,19 @@ Install **git** and **virtualenv**, if you don't already have them installed.
 
 - **git** is used to acquire the latest version of this repository
 - **virtualenv** is used to to manage Python packages for different projects. Using virtualenv allows you to avoid installing Python packages globally which could break system tools or other projects. You can install virtualenv using pip.
+- **jq** is used to parse json data
 
 On Ubuntu, you'll simply run
 
 .. code-block::
 
-	sudo apt-get install git virtualenv
+	sudo apt-get install git virtualenv jq
 
 Here are the links:
 
 - `virtualenv <https://virtualenv.pypa.io/en/stable/>`_
 - `git <https://git-scm.com/>`_
+- `jq <https://stedolan.github.io/jq/download/>`
 
 Clone this GitHub repo
 ----------------------
@@ -355,6 +357,9 @@ Run the following script to see all the **Regions** and **Availability Zones** t
 
     python awscertprep_cli.py show_regions --avail_zones
 
+Output from this script should look like 
+
+.. code-block::
     Regions                  Availability Zones
     -------                  ------------------
     ap-northeast-1           (ap-northeast-1a, ap-northeast-1c, ap-northeast-1d)
@@ -364,7 +369,7 @@ Run the following script to see all the **Regions** and **Availability Zones** t
     ap-southeast-2           (ap-southeast-2a, ap-southeast-2b, ap-southeast-2c)
     ca-central-1             (ca-central-1a, ca-central-1b)
     eu-central-1             (eu-central-1a, eu-central-1b, eu-central-1c)
-    eu-west-1                (eu-west-1a, eu-west-1b, eu-west-1c)
+    eu-west-1                (eu-west-1a, eu-west-1b, eu-west-1c)region_azs_sh
     eu-west-2                (eu-west-2a, eu-west-2b, eu-west-2c)
     eu-west-3                (eu-west-3a, eu-west-3b, eu-west-3c)
     sa-east-1                (sa-east-1a, sa-east-1c)
@@ -372,6 +377,24 @@ Run the following script to see all the **Regions** and **Availability Zones** t
     us-east-2                (us-east-2a, us-east-2b, us-east-2c)
     us-west-1                (us-west-1a, us-west-1b)
     us-west-2                (us-west-2a, us-west-2b, us-west-2c)
+
+BASH and jq option:  Run this script to produce a list of regions and the Availabilty Zones for each
+
+.. code-block::
+
+	./region_azs.sh
+
+Output from this script should look like 
+
+.. code-block::
+
+	REGION:ap-south-1  AZs:ap-south-1a, ap-south-1b
+	REGION:eu-west-3  AZs:eu-west-3a, eu-west-3b, eu-west-3c
+	<--- SNIP --->
+	REGION:us-west-1  AZs:us-west-1b, us-west-1c
+	REGION:us-west-2  AZs:us-west-2a, us-west-2b, us-west-2c
+
+
 
 
 Summary
