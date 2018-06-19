@@ -58,6 +58,10 @@ It will be created in your **Default Region** (we specified this in ex-001). If 
     
     aws ec2 create-vpc --cidr-block 10.0.0.0/16
 
+This should produce output like this:
+
+.. code-block::
+
     {
         "Vpc": {
             "CidrBlock": "10.0.0.0/16",
@@ -82,6 +86,8 @@ It will be created in your **Default Region** (we specified this in ex-001). If 
 
 Environment variable
 ~~~~~~~~~~~~~~~~~~~~
+To simplify our commands and reduce the liklihood of typos, we'll set and environment variable to hold the VPC ID.  The VPC ID comes from the **VpcId** value in the output above without quotes.
+
 .. code-block::
 
     export EX003_VPC=<VpcId>
@@ -93,6 +99,10 @@ Use the following awscli command to ensure that the VPC State is **'available'**
 .. code-block::
     
     aws ec2 describe-vpcs --vpc-ids $EX003_VPC
+
+This will result in a block of json.  You'll want to confirm that the **State** value is "available"
+
+.. code-block::
 
     {
         "Vpcs": [
@@ -121,13 +131,15 @@ Examine the default Route Table
 -------------------------------
 Use the following awscli command to view main/default Route Table.
 
-This is created automatically when a VPC is created. You can see a single entry under **Routes**. This entry will allow for the routing of local traffic for all Subnets associated with the main/default Route Table. If you don't explicitly associate a subnet with another Route Table, it is implicitly associated with the main/default Route Table.
-
-We won't be modifying this Route Table. We will use it to provide routing for the **'private'** Subnet we will create later. Since newly created Subnets are implicitly associated with the main/default Route Table, it would seem to be a good practice to provide reachability to/from the Internet via a separate Route Table. 
+In this command, we'll apply a filter in the Key|Value format to ensure that only the routes associated with our new VPC are displayed.  Note that the filter Name is **vpc-id**
 
 .. code-block::
 
     aws ec2 describe-route-tables --filter Name=vpc-id,Values=$EX003_VPC
+    
+This should produce results like this:
+
+.. code-block::
 
     {
         "RouteTables": [
@@ -155,15 +167,21 @@ We won't be modifying this Route Table. We will use it to provide routing for th
         ]
     }
 
+This is created automatically when a VPC is created. You can see a single entry under **Routes**. This entry will allow for the routing of local traffic for all Subnets associated with the main/default Route Table. If you don't explicitly associate a subnet with another Route Table, it is implicitly associated with the main/default Route Table.
+
+We won't be modifying this Route Table. We will use it to provide routing for the **'private'** Subnet we will create later. Since newly created Subnets are implicitly associated with the main/default Route Table, it would seem to be a good practice to provide reachability to/from the Internet via a separate Route Table. 
+
+
 Environment variable
 ~~~~~~~~~~~~~~~~~~~~
+We'll create another environment variable for our Route Table ID, the Route Table ID comes from the results above and begins with "rtb-"
 .. code-block::
 
     export EX003_RTB_PRIV=<RouteTableId>
 
 Create a Tag
 ------------
-Use the following awscli command to create a **Tag** for the main/default Route Table.
+Use the following awscli command to create and assign a **Tag** to the main/default Route Table.  When creating a tag, the Key and Value are critical.  Here, we're creating a Tag for the "name" and setting it to "private"
 
 .. code-block::
 
@@ -173,11 +191,13 @@ Create a second Route Table
 ---------------------------
 Use the following awscli command to create a second Route Table.
 
-We can see the same single entry under **Routes**. This will allow for the routing of local traffic for all subnets explicitly associated with this Route Table
-
 .. code-block::
 
     aws ec2 create-route-table --vpc-id $EX003_VPC
+
+This should return results like this:
+
+.. code-block::
 
     {
         "RouteTable": {
@@ -197,19 +217,55 @@ We can see the same single entry under **Routes**. This will allow for the routi
         }
     }
 
+We can see the same single entry under **Routes**. This will allow for the routing of local traffic for all subnets explicitly associated with this Route Table
+
 Environment variable
 ~~~~~~~~~~~~~~~~~~~~
+Just like above, we'll create another environment variable for our Route Table ID, the Route Table ID comes from the results above and begins with "rtb-"
 .. code-block::
 
     export EX003_RTB_PUB=<RouteTableId>
 
 Create a Tag
 ------------
-Use the following awscli command to create a tag for the second Route Table.
+Use the following awscli command to create a tag for the second Route Table.  
+Here, we're creating a Tag for the "name" and setting it to "public"
 
 .. code-block::
 
     aws ec2 create-tags --resources $EX003_RTB_PUB --tags Key=Name,Value=public
+
+Sanity Check - Tags
+-------------------
+The following command will show the tags that have been created and their assigned objects:
+
+.. code-block::
+   
+    aws ec2 describe-tags
+
+Should produce results like:
+
+.. code-block::
+   {
+       "Tags": [
+           {
+               "ResourceType": "route-table",
+               "ResourceId": "rtb-xxxxxxxx",
+               "Value": "public",
+               "Key": "Name"
+           },
+           {
+               "ResourceType": "route-table",
+               "ResourceId": "rtb-yyyyyyyy",
+               "Value": "private",
+               "Key": "Name"
+           }
+      ]
+   }
+
+Confirm that tags exis and are assigned to different resource IDs
+
+
 
 Create an Internet Gateway
 --------------------------
