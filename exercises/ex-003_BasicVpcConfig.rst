@@ -246,6 +246,7 @@ The following command will show the tags that have been created and their assign
 Should produce results like:
 
 .. code-block::
+
    {
        "Tags": [
            {
@@ -263,7 +264,7 @@ Should produce results like:
       ]
    }
 
-Confirm that tags exis and are assigned to different resource IDs
+Confirm that tags exist and are assigned to different resource IDs
 
 
 
@@ -271,11 +272,13 @@ Create an Internet Gateway
 --------------------------
 Use the following awscli command to create an Internet Gateway.
 
-We will leverage this component to provide connectivity to/from the Internet for the **'public'** Subnet we create later.
-
 .. code-block::
 
     aws ec2 create-internet-gateway
+
+Should return something like:
+
+.. code-block::
 
     {
         "InternetGateway": {
@@ -285,8 +288,12 @@ We will leverage this component to provide connectivity to/from the Internet for
         }
     }
 
+We will leverage this component to provide connectivity to/from the Internet for the **'public'** Subnet we create later.
+
 Environment variable
 ~~~~~~~~~~~~~~~~~~~~
+Yep, make later commands easier by adding another environment variable.  The InternetGatewayId is in the results above and begins with "igw-"
+
 .. code-block::
 
     export EX003_IG=<InternetGatewayId>
@@ -299,16 +306,45 @@ Use the following awscli command to attach the Internet Gateway to the VPC.
 
       aws ec2 attach-internet-gateway --internet-gateway-id $EX003_IG --vpc-id $EX003_VPC
 
+This command will not return anything, but we can confirm it worked by running this command:
+
+.. code-block::
+
+    aws ec2 describe-internet-gateways --filters Name=internet-gateway-id,Values=$EX003_IG
+    
+This should result in a chunk of json like the following:
+
+.. code-block::
+   {
+      "InternetGateways": [
+           {
+               "Tags": [],
+               "Attachments": [
+                   {
+                       "State": "available",
+                       "VpcId": "vpc-xxxxxxxx"
+                   }
+               ],
+               "InternetGatewayId": "igw-zzzzzzzz"
+           }
+      ]
+   }
+
+You'll want to confirm that the VpcId is your VPC ID
 
 Add a Route
 -----------
-Use the following awscli command to add a **Default Route** that targets the Internet Gateway to the **'public'** Route Table.
+Use the following awscli command to add a **Default Route**  to the **'public'** Route Table that targets the Internet Gateway.
 
 This will allow connectivity to/from the Internet for Subnets explicitly associated with this Route Table.
 
 .. code-block::
 
     aws ec2 create-route --destination-cidr-block 0.0.0.0/0 --gateway-id $EX003_IG --route-table-id $EX003_RTB_PUB
+
+This will only return the following:
+
+.. code-block::
 
     {
         "Return": true
@@ -318,11 +354,13 @@ Examine the Route Table
 -----------------------
 Use the following awscli command to re-examine the **'public'** Route Table.
 
-We can see a second entry under **Routes**.
-
 .. code-block::
 
     aws ec2 describe-route-tables --filter Name=route-table-id,Values=$EX003_RTB_PUB
+
+The results shuold look like:
+
+.. code-block::
 
     {
         "RouteTables": [
@@ -355,15 +393,21 @@ We can see a second entry under **Routes**.
         ]
     }
 
+Now, we now see a second entry under **Routes**; the original has a GatewayId of "local" and our new **default route** uses our Internet Gateway ID
+
 Create a Subnet
 ---------------
-Use the following awscli command to create a Subnet with a prefix length of /23 (512 addresses).
+On AWS, the first address ni a subnet is the network address, the last address is the broadcast address and the second through fourth addresses are reserved by AWS. 
 
-We only 507 usable addresses. This is because, the first address is the network address, the last address is the broadcast address and the second through fourth addresses are reserved by AWS. 
+Use the following awscli command to create a 10.0.0.0/23 Subnet with a prefix length of /23 (512 addresses/507 usable).
 
 .. code-block::
    
    aws ec2 create-subnet --cidr-block 10.0.0.0/23 --vpc-id $EX003_VPC
+
+This should produce results like:
+
+.. code-block::
 
     {
         "Subnet": {
@@ -373,26 +417,33 @@ We only 507 usable addresses. This is because, the first address is the network 
             "DefaultForAz": false,
             "MapPublicIpOnLaunch": false,
             "State": "pending",
-            "SubnetId": "subnet-xxxxxxxxxxxxxxxxx",
-            "VpcId": "vpc-xxxxxxxxxxxxxxxxx",
+            "SubnetId": "subnet-xxxxxxxx",
+            "VpcId": "vpc-xxxxxxxx",
             "AssignIpv6AddressOnCreation": false,
             "Ipv6CidrBlockAssociationSet": []
         }
     }
 
+Notice that the state is pending, but will become available shortly.
+
 Environment variable
 ~~~~~~~~~~~~~~~~~~~~
+Once again, lets set an environment variable.  The SubnetId is in the results above and begins with "subnet-"
 .. code-block::
 
     export EX003_SUBNET_PUB=<SubnetId>
 
 Create a second Subnet
 ----------------------
-Use the following awscli command to create a Subnet with a prefix length of /23 (512 addresses).
+Use the following awscli command to create another  Subnet with a prefix length of /23 (512 addresses).
 
 .. code-block::
 
     aws ec2 create-subnet --cidr-block 10.0.2.0/23 --vpc-id $EX003_VPC
+
+This should produce results like:
+
+.. code-block::
 
     {
         "Subnet": {
@@ -419,13 +470,16 @@ Verify the Subnets
 ------------------
 Use the following awscli command to ensure that the State of both Subnets is **'available'**.
 
-We can see that both Subnets were created in Availability Zone **'us-east-1c'**.
 
 If you wish to control where your Subnets are created, you would use the **'--availability-zone <value>'** option with the **'create-subnet'** command.
 
 .. code-block::
 
     aws ec2 describe-subnets --filter Name=vpc-id,Values=$EX003_VPC
+
+This should produce results like:
+
+.. code-block::
 
     {
         "Subnets": [
@@ -456,6 +510,9 @@ If you wish to control where your Subnets are created, you would use the **'--av
         ]
     }
 
+We can see that both Subnets were created in Availability Zone **'us-east-1c'**.
+
+
 Create a Tag
 ------------
 Use the following awscli commands to create a Tag for both Subnets.
@@ -475,6 +532,10 @@ Use the following awscli command to associate the **'public'** subnet with the *
 
     aws ec2 associate-route-table --route-table-id $EX003_RTB_PUB --subnet-id $EX003_SUBNET_PUB
 
+This should produce results like:
+
+.. code-block::
+
     {
         "AssociationId": "rtbassoc-xxxxxxxxxxxxxxxxx"
     }
@@ -489,6 +550,9 @@ We can now see an entry under **Associations**.
 
     aws ec2 describe-route-tables --filter Name=route-table-id,Values=$EX003_RTB_PUB
 
+This should produce results like:
+
+.. code-block::
 
     {
         "RouteTables": [
