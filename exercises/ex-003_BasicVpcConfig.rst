@@ -592,6 +592,14 @@ This should produce results like:
         ]
     }
 
+See it on the Management Console
+--------------------------------
+* Logon to your AWS Management Console
+* Select Services |  Network & Content Delivery | VPC
+* Click **Your VPCs** on the left-side menu to see a list of your VPS
+* Select **Subnets** and **Route Tables** to confirm your subnets, the data should look familiar
+
+
 Summary
 -------
 - We created a VPC.
