@@ -91,17 +91,29 @@ Setting environment variables may be different on different OSs. Please refer to
 
 Create a Key Pair
 -----------------
-Use the following awscli command to create a new **Key Pair** and save the resulting **'.pem'** file.
+If you have previously created a key pair on AWS that you want to use, be sure that the '.pem' file is copied to your workstation and proceed to 'Modify Permissions'.  Verify the key pair name by using 
 
-**Note: I have only verified that directly redirecting the 'KeyMaterial' to a file produces a valid '.pem' on macOS. Other OSs may have subtle differences.**
+.. code-block::
+
+   aws ec2 describe-key-pairs
+
+To create a new key pair, use the following awscli command to create a new **Key Pair** and save the resulting **'.pem'** file.
+
+**NOTE**: I have that redirecting the 'KeyMaterial' portion of the output to a file produces a valid '.pem' on macOS and Ubuntu 16. Other OSs may have subtle differences.**
 
 .. code-block::
     
     aws ec2 create-key-pair --key-name acpkey1 --query 'KeyMaterial' --output text > acpkey1.pem
 
+On Ubuntu 16, I've found this command also works to create the key pair and save the '.pem':
+
+.. code-block::
+
+   aws ec2 create-key-par --key-name | jq -r '.KeyMaterial' > acpkey1.pem
+
 Modify permissions
 ------------------
-Use the following command to modify the permissions on the '.pem'.
+Use the following command to set the permissions on the '.pem' so that only our account can read it:
 
 .. code-block::
     
@@ -110,6 +122,8 @@ Use the following command to modify the permissions on the '.pem'.
 Create a Security Group
 -----------------------
 Use the following awscli command to create a new Security Group.
+
+**NOTE** We'll be reusing the environment variables created in the previous exercise
 
 .. code-block::
 
@@ -123,6 +137,19 @@ Output:
         "GroupId": "sg-xxxxxxxxxxxxxxxxx"
     }
 
+If you get an error that reads ''aws: error: argument --vpc-id: expected one argument'', it probably means that your EX003_VPC environment variable is not set.  You can retreive the VPC ID value by running 
+
+.. code-block::
+
+   aws ec2 describe-vpcs
+
+Then set the environment variable again by
+
+.. code-block::
+
+   export EX003_VPC=<VpcId value from output>
+  
+
 Environment variable
 ~~~~~~~~~~~~~~~~~~~~
 .. code-block::
@@ -131,11 +158,13 @@ Environment variable
 
 Add a rule to the Security Group
 --------------------------------
-Use the following awscli command to add a rule to the above security group.
+We'll need to add a rule that allows us to connect to our VPC from anywhere over SSH (TCP port 22). Use the following awscli command to add a rule to the above security group.
 
 .. code-block::
 
     aws ec2 authorize-security-group-ingress --group-id $EX003_SG --protocol tcp --port 22 --cidr 0.0.0.0/0
+
+This command has no retrun value
 
 Examine the Security Group
 --------------------------
@@ -267,6 +296,8 @@ Output:
 
 Environment variable
 ~~~~~~~~~~~~~~~~~~~~
+In the output of the run-instances command, you'll find the InstanceId.
+
 .. code-block::
 
     export EX003_INST_PUB=<InstanceId>
@@ -276,6 +307,8 @@ Launch a second Instance
 Use the following awscli command to launch an Instance and attach to the **'private'** Subnet.
 
 ``Reminder: The private Subnet is implicitly associated with the Default/Main Route Table, which does NOT have a Route to the Internet Gateway.``
+
+Notice that we're adding both instances to the same security group
 
 .. code-block::
 
@@ -299,7 +332,7 @@ Private IP address
 ------------------
 Use the following awscli command to collect the IP address of the Instance on the **'private'** Subnet.
 
-``Note: you will type this address in a ssh session, so jot it down.``
+**NOTE**: you will type this address in a ssh session, so jot it down.
 
 .. code-block::
     
@@ -311,6 +344,8 @@ Output:
     
     xxx.xxx.xxx.xxx
 
+The query parameter on the command indicates that only the PrivateIpAddress value should be returned
+
 Allocate an Elastic IP
 ----------------------
 Use the following awscli command to allocate a public IPv4 address
@@ -318,6 +353,8 @@ Use the following awscli command to allocate a public IPv4 address
 .. code-block::
 
     aws ec2 allocate-address --domain vpc
+
+This command simply reserves a public/elastic IP for us
 
 Output:
 
@@ -352,6 +389,36 @@ Output:
         "AssociationId": "eipassoc-xxxxxxxxxxxxxxxxx"
     }
 
+Confirm Association
+-------------------
+Run this command to verify that the Public IP address has been associated with an instance:
+
+.. code-block::
+   
+   aws ec2 describe-addresses
+
+Output:
+
+.. code-block::
+   
+   {
+       "Addresses": [
+           {
+               "Domain": "vpc",
+               "InstanceId": "i-044affe7127558339",
+               "NetworkInterfaceId": "eni-f0239fa7",
+               "AssociationId": "eipassoc-7d7cabb0",
+               "NetworkInterfaceOwnerId": "269847117696",
+               "PublicIp": "18.221.226.135",
+               "AllocationId": "eipalloc-6d69964c",
+               "PrivateIpAddress": "10.0.0.23"
+           }
+       ]
+   }
+   
+
+
+
 Test inbound connectivity
 -------------------------
 Use the following commands to test connectivity to the Instance in the public Subnet (via the Elastic IP).
@@ -362,6 +429,8 @@ Use the following commands to test connectivity to the Instance in the public Su
 
     ping $EX003_PUB_IP
     ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@$EX003_PUB_IP
+    
+If you are prompted with "Are you sure you want to continue connecting (yes/no)?", that's a good thing!  enter 'y' and you'll be connected
 
 Test outbound connectivity
 --------------------------
@@ -373,7 +442,7 @@ Use the following command to test connectivity from the Instance in the public S
 
     sudo apt update
 
-    Type 'exit' to disconnect from the Instance.
+Type 'exit' to close the ssh session to this instance
 
 Re-associate the Elastic IP
 ---------------------------
@@ -395,16 +464,16 @@ Test inbound connectivity
 -------------------------
 Use the following commands to test connectivity to the Instance in the private Subnet via the Elastic IP.
 
-``Expected results: both 'ping' and 'ssh' should be fail.``
+``Expected results: both 'ping' and 'ssh' should fail to connect.``
 
 .. code-block::
 
     ping $EX003_PUB_IP
     ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@$EX003_PUB_IP
 
-Re-associate the Elastic IP
+Re-re-associate the Elastic IP
 ---------------------------
-Use the following awscli command to re-associate the Elastic IP with the Instance we launched in the public Subnet.
+Use the following awscli command to return the Elastic IP to the Instance we launched in the public Subnet.
 
 .. code-block::
 
@@ -420,7 +489,7 @@ Output:
 
 Reconnect
 -------
-Use the following command to reconnect to the Instance in the public Subnet.
+Use the following commands to reconnect to the Instance in the public Subnet and to copy our pem to the Instance
 
 
 .. code-block::
@@ -428,11 +497,11 @@ Use the following command to reconnect to the Instance in the public Subnet.
     scp -i acpkey1.pem acpkey1.pem ubuntu@$EX003_PUB_IP:/home/ubuntu
     ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@$EX003_PUB_IP
 
-    Do NOT 'exit'
+Do NOT 'exit'
 
 Test local connectivity
 -----------------------
-You should still be connected to the Instance in the public Subnet.
+You should still be connected to the Instance in the **public** Subnet.
 
 Use the following commands to test connectivity to the Instance in the private Subnet.
 
@@ -443,7 +512,7 @@ Use the following commands to test connectivity to the Instance in the private S
     ping <ip-addr-private-instance>
     ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@<ip-addr-private-instance>
 
-You are now connected to the Instance on the private subnet.
+You are now connected to the Instance on the **private** subnet ''through the instance on the **public** subnet.
 
 Test outbound connectivity
 --------------------------
@@ -457,13 +526,16 @@ Use the following command to test oubound connectivity from the Instance in the 
 
     Type 'cntrl-c' to kill 'apt'
 
-    Type 'exit' twice to disconnect from both Instances.
+Type 'exit' twice to disconnect from both Instances.
 
-The private subnet has no inbound or outbound path to the Internet. In a later exercise we will create a **NAT Gateway** to allow for outbound connectivity for priavte Subnets to the Internet.
+The private subnet has no inbound or outbound path to the Internet. In a later exercise we will create a **NAT Gateway** to allow for outbound connectivity for private Subnets to the Internet.
 
 Add a rule to the Security Group
 --------------------------------
-Use the following awscli command to create a new rule to the above security group.
+Use the following awscli command to create a new rule to the above security group.  This rule enables the icmp protocol from anywhere.
+Note that the command requires the 'port' parameter - AWS document has this to say: 
+
+For ICMP: A single integer or a range (type-code ) representing the ICMP type number and the ICMP code number respectively. A value of -1 indicates all ICMP codes for all ICMP types. A value of -1 just for type indicates all ICMP codes for the specified ICMP type.
 
 .. code-block::
 
@@ -480,12 +552,10 @@ Use the following commands to test connectivity to the Instance in the public Su
     ping $EX003_PUB_IP
     ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@$EX003_PUB_IP
 
-You are now connected to the Instance on the public subnet.
+You are connected again to the Instance on the public subnet.
 
 Test local connectivity
 -----------------------
-You should still be connected to the 'public' Instance.
-
 Use the following command to test connectivity to the 'private' Instance. 
 
 ``Expected results: 'ping' should now be successful.``
@@ -541,7 +611,9 @@ Output:
 
 Release the Elastic IP
 ----------------------
-Use the following awscli command to release the public IPv4 address
+Use the following awscli command to release the public IPv4 address.  Recall that leaving it allocated but unassigned will incur a charge.  
+
+**NOTE**: The associated instance will have to complete its termination in order for the Elastic IP to not be "In use" and availabel for release
 
 .. code-block::
 
