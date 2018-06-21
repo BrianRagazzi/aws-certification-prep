@@ -58,9 +58,9 @@ The activities in this exercise may result in charges to your AWS account.
 
 Limits
 ------
-The following table shows the default limits for the components utilized in this exercise.
+The following table shows the default limits for the components utilized in this exercise.  We won't get anywhere near the limit on any of these EC2 compnents
 
-``NOTE: You can view all your EC2 limits and request increases by clicking on 'Limits' in the navigation pane of the EC2 console.``
+**NOTE**: You can view all your EC2 limits and request increases by clicking on 'Limits' in the navigation pane of the EC2 console.
 
 .. list-table::
    :widths: 25, 25
