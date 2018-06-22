@@ -582,13 +582,13 @@ Terminate Instances
 -------------------
 Use the following awscli command to terminate both instances.
 
-Examine the current state. Both should show a **'currentState'** of **'shutting-down'**.
-
-This operation is idempotent. Rerun the command until you see a **'currentState'** of **'terminated'**.
-
 .. code-block::
 
     aws ec2  terminate-instances --instance-ids $EX003_INST_PUB $EX003_INST_PRIV
+
+Examine the current state. Both should show a **'currentState'** of **'shutting-down'**.
+
+This operation is idempotent. Rerun the command until you see a **'currentState'** of **'terminated'**.
 
 Output:
 
@@ -625,7 +625,7 @@ Release the Elastic IP
 ----------------------
 Use the following awscli command to release the public IPv4 address.  Recall that leaving it allocated but unassigned will incur a charge.  
 
-**NOTE**: The associated instance will have to complete its termination in order for the Elastic IP to not be "In use" and availabel for release
+**NOTE**: The associated instance will have to complete its termination in order for the Elastic IP to not be "In use" and available for release
 
 .. code-block::
 
