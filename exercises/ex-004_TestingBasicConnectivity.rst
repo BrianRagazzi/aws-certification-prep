@@ -85,7 +85,7 @@ Environment variables
 ---------------------
 During this exercise, we will be creating environment variables to simplify the syntax of commands run later in the exercise. I have decided to do this manually, because I want to show the the full output from each command and not redirect a filtered output directly into a variable.
 
-Once you are comfortable with the expected output of a command and wish filter the output, then you might want to try the **'--query'** and **'--output'** options available in the awscli command.
+Once you are comfortable with the expected output of a command and wish filter the output, then you might want to try the **'--filter'**, **'--query'** and **'--output'** options available in the awscli command.
 
 Setting environment variables may be different on different OSs. Please refer to the documentation for your OS.
 
@@ -99,7 +99,7 @@ If you have previously created a key pair on AWS that you want to use, be sure t
 
 To create a new key pair, use the following awscli command to create a new **Key Pair** and save the resulting **'.pem'** file.
 
-**NOTE**: I have that redirecting the 'KeyMaterial' portion of the output to a file produces a valid '.pem' on macOS and Ubuntu 16. Other OSs may have subtle differences.**
+**NOTE**: I have tested that redirecting the 'KeyMaterial' portion of the output to a file produces a valid '.pem' on macOS and Ubuntu 16. Other OSs may have subtle differences.
 
 .. code-block::
     
@@ -121,7 +121,7 @@ Use the following command to set the permissions on the '.pem' so that only our 
 
 Create a Security Group
 -----------------------
-Use the following awscli command to create a new Security Group.
+Use the following awscli command to create a new Security Group in the VPC named "Int2Public" with a description.
 
 **NOTE** We'll be reusing the environment variables created in the previous exercise
 
@@ -137,7 +137,7 @@ Output:
         "GroupId": "sg-xxxxxxxxxxxxxxxxx"
     }
 
-If you get an error that reads ''aws: error: argument --vpc-id: expected one argument'', it probably means that your EX003_VPC environment variable is not set.  You can retreive the VPC ID value by running 
+If you get an error that reads ''aws: error: argument --vpc-id: expected one argument'', it probably means that your EX003_VPC environment variable is not set.  You can retreive the VPC ID value by running the following command:
 
 .. code-block::
 
@@ -150,7 +150,7 @@ Then set the environment variable again by
    export EX003_VPC=<VpcId value from output>
   
 
-Environment variable
+Security Group Environment variable
 ~~~~~~~~~~~~~~~~~~~~
 .. code-block::
 
@@ -224,7 +224,9 @@ We are going to use the following AMI, but the 'imageIds' are different for each
 
 ``Ubuntu Server 16.04 LTS (HVM), SSD Volume Type``
 
-Use the following table to identify the 'imageId' for your region.
+There are hundreds of AMIs available in each region that you may use, but I have confirmed that the following are compatible with the free tier.
+
+Use the following table to identify the 'ImageId' for your region.
 
 .. list-table::
    :widths: 25, 25, 25, 25, 25, 25
@@ -274,17 +276,25 @@ Use the following table to identify the 'imageId' for your region.
 
 Launch an Instance
 -------------------
-Use the following awscli command to launch an Instance and attach to the **'public'** Subnet.
+Use the following awscli command to launch an Instance using the selected AMI and attach to the **'public'** Subnet.
 
 ``Reminder: The only thing that makes it a 'public' Subnet is the fact that it is associated with a Route Table that has a Route to the Internet Gateway.``
 
-We have used the **'--client-token'** to option ensure this operation is  Idempotent.
+We have used the **'--client-token'** to option ensure this operation is Idempotent.
 
 - `More information on Idempotency <https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Run_Instance_Idempotency.html>`_
 
 .. code-block::
 
     aws ec2 run-instances --image-id $EX003_IMAGE_ID --instance-type t2.micro --key-name acpkey1 --subnet-id $EX003_SUBNET_PUB --security-group-ids $EX003_SG --client-token awscertprep-ex-003-001
+
+The parameters of this command indicate:
+   * Which AMI to use:  image-id $EX003_IMAGE_ID
+   * How many vCPU, RAM and base storage: instance-type t2.micro
+   * Access key: key-name acpkey1
+   * Layer 3 network to attach to: subnet-id $EX003_SUBNET_PUB
+   * Security policy to apply: security-group-ids $EX003_SG
+   * Token for idempotency: client-token awscertprep-ex-003-001
 
 Output:
 
@@ -368,6 +378,8 @@ Output:
 
 Environment variable
 ~~~~~~~~~~~~~~~~~~~~
+Set a couple of environment variables using the output above
+
 .. code-block::
 
     export EX003_EIP=<AllocationId>
@@ -637,6 +649,9 @@ This will delete the VPC itself, plus the Subnets, Route Tables and Internet Gat
 
     aws ec2 delete-vpc --vpc-id $EX003_VPC
 
+
+If you receive an error regarding dependencies, try again in a few minutes.  If the deletion continues to fail, the VPC may be deletable via the AWS Management Console.
+
 Summary
 -------
 - We created a Key Pair.
@@ -646,6 +661,7 @@ Summary
 - We allocated a Elastic IP.
 - We map/re-mapped that Elastic IP to Instances.
 - We tested connectivity to/from both the 'public' and 'private' Instances.
+- We removed the VPC and related objects (**NOTE**: the keypair will not be deleted, keep the 'pem' file safe)
 
 Next steps
 ----------
