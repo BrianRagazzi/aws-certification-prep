@@ -2,9 +2,14 @@
 
 Derived from https://github.com/aws-samples/aws-microservices-deploy-options#deployment-package-lambda-functions
 
-Prep Ubuntu: needs: curl, nodejs, default-jdk, npm, python-pip, python-dev, build-essential, python-setuptools, maven
+Prep Ubuntu: needs: curl, default-jdk, python-pip, python-dev, build-essential, python-setuptools, maven
 
 sudo apt-get install curl nodejs default-jdk npm python-pip python-dev build-essential python-setuptools maven
+
+We need nodejs, but installing it from apt seems to get a very old version
+
+curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+sudo apt-get install -y nodejs
 
 pip install --user aws-sam-cli
 # OSX and Ubuntu need /bin appended
@@ -13,9 +18,13 @@ export PATH=$PATH:$USER_BASE_PATH
 
 check
 sam --version
-npm version
+check for version 0.4.0+
+npm -v
+Check for version 6+
+nodejs -v
+check for version 10+
 
-npm install -g aws-sam-local
+sudo npm install -g aws-sam-local
 
 Run this:
 sudo update-alternatives --config java
@@ -40,5 +49,17 @@ Test microservices locally with sam cli:
 sam local start-api --template microservices-greeting/greeting-sam.yaml --port 3001
 The first run will have to download the images and may take a few minutes to complete
 
+Build the deployment package for each microservice
+cd microservices-greeting
+mvn clean package -Plambda
+cd ../microservices-name
+mvn clean package -Plambda
+cd ../microservices-webapp
+mvn clean package -Plambda
+cd ..
+
+aws s3api create-bucket --bucket aws-microservices-deploy-options \
+  --region us-east-2 \
+  --create-bucket-configuration LocationConstraint=us-east-2
 
 
