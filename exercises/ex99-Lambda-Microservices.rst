@@ -63,7 +63,8 @@ ln -s webapp-0.zip webapp.zip
 cd ..
 cd /aws-microservices-deploy-options/apps/lambda
 
-IAM, add AmazonS3FullAccess & AWSCloudFormationReadOnlyAccess permissions to apiuser01 account
+IAM, create policy for CloudFormation FullAccess
+add AmazonS3FullAccess CloudFormationFullAcess permissions to apiuser01 account
 
 aws s3api create-bucket --bucket bpr-microservices-test2 \
   --region us-east-2 \
