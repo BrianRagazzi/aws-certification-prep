@@ -160,6 +160,12 @@ Below is the contents of the **'ex-004_template.yaml'** file from the **'templat
 .. code-block::
 
 	---
+	Parameters:
+          KeyPairName:
+            Type: String
+            Default: acpkey1
+            Description: Name of existing KeyPair
+
 	Mappings: 
 	  RegionMap: 
 	    us-east-1: 
@@ -277,7 +283,8 @@ Below is the contents of the **'ex-004_template.yaml'** file from the **'templat
 	    Properties: 
 	      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", 64]
 	      InstanceType: t2.micro
-	      KeyName: acpkey1
+	      KeyName:
+                Ref: KeyPairName
 	      SecurityGroupIds: 
 	        - !Ref SecurityGroup
 	      SubnetId: !Ref SubnetPublic
@@ -290,7 +297,8 @@ Below is the contents of the **'ex-004_template.yaml'** file from the **'templat
 	    Properties: 
 	      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", 64]
 	      InstanceType: t2.micro
-	      KeyName: acpkey1
+	      KeyName:
+                Ref: KeyPairName
 	      SecurityGroupIds: 
 	        - !Ref SecurityGroup
 	      SubnetId: !Ref SubnetPrivate
@@ -314,10 +322,20 @@ Use the following awscli command to validate the structure of the template file.
 .. code-block::
 
 	aws cloudformation validate-template --template-body file://./templates/ex-004_template.yaml
+Output
+
+.. code-block::
 
 	{
-    	"Parameters": []
-	}
+          "Parameters": [
+              {
+                "DefaultValue": "acpkey1",
+                "NoEcho": false,
+                "Description": "Name of existing KeyPair",
+                "ParameterKey": "KeyPairName"
+              }
+          ]
+        }
 
 Template summary
 ----------------
@@ -326,6 +344,10 @@ Use the following awscli command to get a summary of the template.
 .. code-block::
 
 	aws cloudformation get-template-summary --template-body file://./templates/ex-004_template.yaml
+
+Output
+
+.. code-block::
 
 	{
     	"Parameters": [],
@@ -343,8 +365,19 @@ Use the following awscli command to get a summary of the template.
         	"AWS::EC2::Instance",
         	"AWS::EC2::EIP"
     	],
-    	"Version": "2010-09-09"
-	}
+    	 "Version": "2010-09-09",
+         "Parameters": [
+             {
+                "ParameterType": "String",
+                "ParameterConstraints": {},
+                "Description": "Name of existing KeyPair",
+                "DefaultValue": "acpkey1",
+                "NoEcho": false,
+                "ParameterKey": "KeyPairName"
+            }
+          ]
+         }
+
 
 Estimated costs 
 ---------------
@@ -362,11 +395,12 @@ Copy the URL and paste it into your URL to see the estimated costs for this temp
 
 Create Stack
 ------------
-Use the following awscli command to create a new **'Stack'** based on the template.
+Use the following awscli command to create a new **'Stack'** based on the template.  If your keypair is not named "acpkey1", set the ParameterValue to the correct name of your existing key pair.
 
 .. code-block::
 
-	aws cloudformation create-stack --stack-name ex-004 --template-body file://./templates/ex-004_template.yaml
+	aws cloudformation create-stack --stack-name ex-004 --template-body file://./templates/ex-004_template.yaml  \
+	   --parameters ParameterName=KeyPairName,ParameterValue=acpkey1
 
 Output
 
@@ -410,7 +444,7 @@ Use the following awscli command to explore the **StackEvents**.
 
 	aws cloudformation describe-stack-events --stack-name ex-004
 
-	... not included do to size ...
+Output excluded due to size ...
 
 Delete the Stack
 ----------------
@@ -420,7 +454,7 @@ Use the following awscli command to delete the Stack.
 
 	aws cloudformation delete-stack --stack-name ex-004
 
-	... not included do to size ...
+Output excluded due to size ...
 
 Check the status
 ----------------
