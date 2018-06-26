@@ -40,6 +40,7 @@ source /etc/environment
 
 mkdir -p apps/lambda
 cd apps/lambda
+git clone https://github.com/aws-samples/aws-microservices-deploy-options.git
 git clone https://github.com/arun-gupta/microservices-greeting
 git clone https://github.com/arun-gupta/microservices-name
 git clone https://github.com/arun-gupta/microservices-webapp
@@ -52,14 +53,36 @@ The first run will have to download the images and may take a few minutes to com
 Build the deployment package for each microservice
 cd microservices-greeting
 mvn clean package -Plambda
+ln -s greeting-0.zip greeting.zip
 cd ../microservices-name
 mvn clean package -Plambda
+ln -s name-0.zip name.zip
 cd ../microservices-webapp
 mvn clean package -Plambda
+ln -s webapp-0.zip webapp.zip
 cd ..
+cd /aws-microservices-deploy-options/apps/lambda
 
-aws s3api create-bucket --bucket aws-microservices-deploy-options \
+IAM, add AmazonS3FullAccess & AWSCloudFormationReadOnlyAccess permissions to apiuser01 account
+
+aws s3api create-bucket --bucket bpr-microservices-test2 \
   --region us-east-2 \
   --create-bucket-configuration LocationConstraint=us-east-2
 
 
+sam package \
+  --template-file sam.yaml \
+  --s3-bucket bpr-microservices-test2 \
+  --output-template-file \
+  sam.transformed.yaml
+  
+  Results:
+  Uploading to f71017c32fdb512ffd4f9ce814f1d7ab  9366742 / 9366742.0  (100.00%)
+Successfully packaged artifacts and wrote output template to file sam.transformed.yaml.
+Execute the following command to deploy the packaged template
+aws cloudformation deploy --template-file /home/build/aws-microservices-deploy-options/apps/lambda/sam.transformed.yaml --stack-name <YOUR STACK NAME>
+
+sam deploy \
+  --template-file sam.transformed.yaml \
+  --stack-name aws-microservices-deploy-options-lambda \
+  --capabilities CAPABILITY_IAM
