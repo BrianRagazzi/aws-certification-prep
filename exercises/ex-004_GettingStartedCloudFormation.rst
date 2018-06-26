@@ -118,6 +118,10 @@ Use the following awscli command to verify access to CloudFormation API.
 
 	aws cloudformation describe-stacks
 
+Output
+
+.. code-block::
+
 	{
 		"Stacks": []
 	}
@@ -133,6 +137,10 @@ For more information on CloudFormation account limits:
 .. code-block::
 
 	aws cloudformation describe-account-limits
+
+Output
+
+.. code-block::
 	
 	{
 		"AccountLimits": [
@@ -156,6 +164,8 @@ Below is the contents of the **'ex-004_template.yaml'** file from the **'templat
 ``Notice how under 'PublicInstance' and 'Private Instance', we use '!FindInMap' to have CloudFormation lookup the correct ImageId, based on the AWS Region we are deploying to.``  This gives the template flexibility for use in any region.
 
 ``Notice how '!Ref' is used to reference other resources by name where needed.``
+
+``Notice the Parameters block at the top.  This allows us to pass the name of the Key Pair in case yours is not named 'acpkey1'.`` 
 
 .. code-block::
 
@@ -322,6 +332,7 @@ Use the following awscli command to validate the structure of the template file.
 .. code-block::
 
 	aws cloudformation validate-template --template-body file://./templates/ex-004_template.yaml
+
 Output
 
 .. code-block::
@@ -387,6 +398,10 @@ Use the following awscli command to get an estimated monthly cost for the compon
 	
 	aws cloudformation estimate-template-cost --template-body file://./templates/ex-004_template.yaml
 
+Output
+
+.. code-block::
+
 	{
     	"Url": "http://calculator.s3.amazonaws.com/calc5.html?key=cloudformation/4fd01c4d-7530-4462-a0c3-608cb6df057d"
 	}
@@ -419,6 +434,10 @@ Rerun this command until **'StackStatus'** is **'CREATE_COMPLETE'**.
 .. code-block::
 
 	aws cloudformation describe-stacks --stack-name ex-004
+
+Output
+
+.. code-block::
 
 	{
     	"Stacks": [
@@ -465,6 +484,10 @@ Rerun this until you get the following error: "An error occurred (ValidationErro
 .. code-block::
 
 	aws cloudformation describe-stacks --stack-name ex-004
+
+Output
+
+.. code-block::
 
 	{
     	"Stacks": [
