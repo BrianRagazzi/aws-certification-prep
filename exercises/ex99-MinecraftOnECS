@@ -1,0 +1,95 @@
+
+create ECR policy, add to apiuser
+
+Create repo on ECR
+aws ecr create-repository --repository-name demo/spigot
+
+get RepoURI: 
+aws ecr describe-repositories --query 'repositories[?repositoryName==`demo/spigot`].repositoryUri' --output text
+
+copy to envvar
+export REPOURI=<value from output above>
+
+aws ecr get-login --no-include-email --region us-east-2
+outputs a docker command, copy and paste that command to run it in order to authenticate docker to ECR
+
+git clone https://github.com/nimmis/docker-spigot
+
+edit /etc/docker/daemon.json with:
+{
+	"dns": ["10.0.157.35", "10.0.157.3"]
+}
+
+docker build -t demo/spigot .
+or pull....
+
+docker tag demo/spigot:latest 269847117696.dkr.ecr.us-east-2.amazonaws.com/demo/spigot:latest
+
+docker push 269847117696.dkr.ecr.us-east-2.amazonaws.com/demo/spigot:latest
+
+Create Cluster, task, port-mapping, etc
+
+
+
+{
+    "executionRoleArn": "arn:aws:iam::269847117696:role/ecsTaskExecutionRole",
+    "containerDefinitions": [
+        {
+            "dnsSearchDomains": null,
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/first-run-task-definition",
+                    "awslogs-region": "us-east-2",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "entryPoint": null,
+            "portMappings": [
+                {
+                    "hostPort": 25565,
+                    "protocol": "tcp",
+                    "containerPort": 25565
+                },
+                {
+                    "hostPort": 22,
+                    "protocol": "tcp",
+                    "containerPort": 22
+                }
+            ],
+            "command": null,
+            "linuxParameters": null,
+            "cpu": 0,
+            "environment": [],
+            "ulimits": null,
+            "dnsServers": null,
+            "mountPoints": [],
+            "workingDirectory": null,
+            "dockerSecurityOptions": null,
+            "memory": null,
+            "memoryReservation": 1024,
+            "volumesFrom": [],
+            "image": "269847117696.dkr.ecr.us-east-2.amazonaws.com/demo/spigot:latest",
+            "disableNetworking": null,
+            "healthCheck": null,
+            "essential": true,
+            "links": null,
+            "hostname": null,
+            "extraHosts": null,
+            "user": null,
+            "readonlyRootFilesystem": null,
+            "dockerLabels": null,
+            "privileged": null,
+            "name": "spigot"
+        }
+    ],
+    "memory": "4096",
+    "taskRoleArn": null,
+    "family": "first-run-task-definition",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "networkMode": "awsvpc",
+    "cpu": "1024",
+    "volumes": []
+}
