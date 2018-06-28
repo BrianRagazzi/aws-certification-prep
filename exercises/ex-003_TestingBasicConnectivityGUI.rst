@@ -76,125 +76,28 @@ The following table shows the default limits for the components utilized in this
    * - Elastic IP addresses
      - 5 per region
 
-Environment variables
----------------------
-During these exercises, we will be using the output of some commands to create environment variables. This will help simplify the syntax subsequent commands.
-
-In some places, we will do this manually, because we want to show the the full output of the command. In other places, we will use the **'--query'** and **'--output'** options available in the awscli command to filter the output directly into a variable.
-
-Setting environment variables may be different on different OSs. Please refer to the documentation for your OS.
-
-**Note: We'll be reusing some of the environment variables created in the previous exercise, in this exercise.**
+Preparation
+-----------
+Logon to your AWS accound and navigate to the AWS Management console
 
 Create a Security Group
 -----------------------
-This Security Group will be applied to the Instances created later in this exercise.
+We'll create a Security Group will be applied to the Instances created later in this exercise.
 
-Use the following awscli command to create a new Security Group.
+1. Under the **Services** menu, select **EC2** under *Compute*
+2. On the left-side menu, select **Security Groups** under NETWORK & SECURITY
+3. Click 'Create Security Group'
+4. In the 'Create Security Group' window, set the following values:
+      * Security Group Name: Int2Public
+      * Description: Security Group for Instances
+      * VPC: Select your VPC
+5. Under Security Group Rules, select the 'Inbound' tab and click 'Add Rule'  
+6. In the Rule definition row, set the following values: 
+      * Type: SSH (this sets protocol to TCP and port to 22)
+      * Source: Anywhere (or My IP)
+      * Description: Allow SSH inbound
+   
 
-.. code-block::
-
-    aws ec2 create-security-group \
-        --group-name Int2Public \
-        --description "Security Group for Instances" \
-        --vpc-id $EX002_VPC
-
-Output:
-
-.. code-block::
-
-    {
-        "GroupId": "sg-xxxxxxxxxxxxxxxxx"
-    }
-
-Troubleshooting:
-~~~~~~~~~~~~~~~~
-If you get an error that reads **'aws: error: argument --vpc-id: expected one argument'**, it probably means that your **'EX002_VPC'** environment variable is not set. You can retrieve the VPC ID value by running the following command:
-
-.. code-block::
-
-    aws ec2 describe-vpcs
-
-Then set the environment variable again:
-
-.. code-block::
-
-    export EX002_VPC=<VpcId>
-
-
-Environment variable
-~~~~~~~~~~~~~~~~~~~~
-.. code-block::
-
-    export EX003_SG=<GroupId>
-
-Add a rule to the Security Group
---------------------------------
-We'll need to add an ingress rule to our security group. This rule will allow inbound traffic to SSH (tcp port 22) from anywhere (0.0.0.0/0). By default, Security Groups allow all outbound traffic.
-
-We will cover Security Groups in more detail in a later exercise.
-
-Use the following awscli command to add a rule to the above security group.
-
-.. code-block::
-
-    aws ec2 authorize-security-group-ingress \
-        --group-id $EX003_SG \
-        --protocol tcp \
-        --port 22 \
-        --cidr 0.0.0.0/0
-
-Examine the Security Group
---------------------------
-Use the following awscli command to examine the above security group.
-
-.. code-block::
-
-    aws ec2 describe-security-groups --group-ids $EX003_SG
-
-Output:
-
-.. code-block::
-
-    {
-        "SecurityGroups": [
-            {
-                "Description": "Security Group for Instances",
-                "GroupName": "Int2Public",
-                "IpPermissions": [
-                    {
-                        "FromPort": 22,
-                        "IpProtocol": "tcp",
-                        "IpRanges": [
-                            {
-                                "CidrIp": "0.0.0.0/0"
-                            }
-                        ],
-                        "Ipv6Ranges": [],
-                        "PrefixListIds": [],
-                        "ToPort": 22,
-                        "UserIdGroupPairs": []
-                    }
-                ],
-                "OwnerId": "xxxxxxxxxxxx",
-                "GroupId": "sg-xxxxxxxxxxxxxxxxx",
-                "IpPermissionsEgress": [
-                    {
-                        "IpProtocol": "-1",
-                        "IpRanges": [
-                            {
-                                "CidrIp": "0.0.0.0/0"
-                            }
-                        ],
-                        "Ipv6Ranges": [],
-                        "PrefixListIds": [],
-                        "UserIdGroupPairs": []
-                    }
-                ],
-                "VpcId": "vpc-xxxxxxxxxxxxxxxxx"
-            }
-        ]
-    }
 
 Amazon Machine Image (AMI)
 --------------------------
