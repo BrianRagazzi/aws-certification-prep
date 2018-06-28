@@ -67,7 +67,7 @@ The activities in this exercise may result in charges to your AWS account.
      - During this exercise, we will creating a VPC Endpoint. It should not need to run for more than hour or so.
    * - VPC Endpoint
      - $0.01 per GB of data processed.
-     - During this exercise, we will creating a NAT Gateway. A small amount of data will be processed.
+     - During this exercise, we will creating a VPC Endpoint. A small amount of data will be processed.
    * - Data Transfer
      -
         + $0.00 per GB - Data Transfer IN to Amazon EC2 from Internet
@@ -83,7 +83,7 @@ You can view all your EC2 limits and request increases by clicking on 'Limits' i
 
 Environment variables
 ---------------------
-During these exercises, we will be using the output of some commands to creatie environment variables. This will help simplify the syntax subsequent commands.
+During these exercises, we will be using the output of some commands to create environment variables. This will help simplify the syntax of subsequent commands.
 
 In some places, we will do this manually, because we want to show the the full output of the command. In other places, we will use the **'--query'** and **'--output'** options available in the awscli command to filter the output directly into a variable.
 
@@ -93,8 +93,8 @@ Access Management
 -----------------
 We need to make the following changes in IAM
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-- Add permissions for IAM to 'apiuser01' (up to this point we have only accessed IAM through the AWS Console).
-- Add permissions for SSM to 'apiuser01'
+- Add permissions for IAM (Identity and Access Management) to 'apiuser01' (up to this point we have only accessed IAM through the AWS Console).
+- Add permissions for SSM (Simple Systems Manager) to 'apiuser01'
 - Create a new Role for use later in the exercise.  
 
 Add permissions
@@ -119,7 +119,7 @@ Create Role
 - In the search box, type **AmazonEC2FullAccess**, then select **AmazonEC2FullAccess**.
 - In the search box, type **AmazonSSMFullAccess**, then select **AmazonSSMFullAccess**.
 - Click on **Next: Review**.
-- Under **Role name**, enter **ec2AccessForInstances**.
+- Under **Role name**, enter **EC2AccessForInstances**.
 - Click **Create role**.
 
 Verify access
@@ -161,26 +161,30 @@ Output:
 
 Template
 --------
-In order to build our starting configuration, we will use a CloudFormation Template. This template is based on the one that we used in **'ex-004'**, but with the following modifications:
+In order to build our starting configuration, we will use a CloudFormation Template. This template is based on the one that we used in **'ex-004'**, but with the following additions:
 
-Fixed
+Added
 ~~~~~
-The following modifications will persist throughout the lab
+The template has been updated to allow Internet access for the 'private' Instance during deployment, so the startup commands can execute successfully. Differences between ex-005_template.yaml and ex-004_template.yaml:
 
 - Added a new 'private' Route Table.
 - Associated the 'private' Subnet with the 'private' Route Table.
 - Added a new security group.
 - Added a second Elastic IP.
 - Added 'apt' and 'pip' commands to the 'public' and 'private' Instances. These will run at startup and install the necessary packages for the lab.
-
-Temp
-~~~~
-The following modifications are there to allow Internet access for the 'private' Instance during deployment, so the startup commands can execute successfully.
-
 - Added a default Route that targets the Internet Gateway to the 'private' Route Table.
 - Associated with second Elastic IP with the 'private' Instance.
 
-Only the new and modified resources are shown below:
+The new and modified resources are shown below:
+
+**DAVID**
+These lines need some explanation:
+   UserData:
+          "Fn::Base64":
+              "Fn::Join": [
+                  "\n",
+                  
+
 
 .. code-block::
 
@@ -283,11 +287,16 @@ Only the new and modified resources are shown below:
 
 Create Stack
 ------------
-Use the following awscli command to create a new **'Stack'** based on the template.
+Use the following awscli command to create a new Stack based on the template. If your Key Pair is not named 'acpkey1', set the ParameterValue to the correct name of your existing Key Pair.
+
+Note: If you are using the 'acpkey1' Key Pair, you can leave off the '--parameters' option all together.
 
 .. code-block::
 
-    aws cloudformation create-stack --stack-name ex-005 --template-body file://./templates/ex-005_template.yaml
+    aws cloudformation create-stack \
+        --stack-name ex-005 \
+        --template-body file://templates/ex-005_template.yaml \
+        --parameters ParameterKey=KeyPairName,ParameterValue=acpkey1
 
 Output:
 
@@ -331,7 +340,7 @@ Review the Stack details
 ------------------------
 Use the following awscli command to display the **'LogicalResourceId'** and **'PhysicalResourceId'** for all the components in the **Stack**
 
-Notice the format of this portion of the query string **'{"Logical Resource Id": LogicalResourceId,"Physical Resource Id": PhysicalResourceId}'**, it adds a header for each column.** 
+Notice the format of this portion of the query string **'{"Logical Resource Id": LogicalResourceId,"Physical Resource Id": PhysicalResourceId}'**, this syntax adds a header for each column of the table.** If this query string is omitted, the table is very wide and difficult to read.
 
 .. code-block::
 
@@ -367,7 +376,7 @@ Output:
 
 Environment variables
 ~~~~~~~~~~~~~~~~~~~~~
-Run the following commands to capture the 'PhysicalResourceId' for the applicable components.
+Run the following commands to capture the 'PhysicalResourceId' for the applicable components.  Each aws command retrieves one value from the describe-stack-resources output and sets and environment variable to that value.
 
 .. code-block::
 
@@ -391,25 +400,33 @@ Run the following commands to capture the 'PhysicalResourceId' for the applicabl
 
 Sanity check
 ~~~~~~~~~~~~
+There are several ways to verify that the environment variables are set correctly; here's one way:
 
 .. code-block::
     
-    echo $EX005_IP_PUBLIC
-    echo $EX005_IP_NAT
-    echo $EX005_INST_PRIV
-    echo $EX005_INST_PRIV
-    echo $EX005_RTB_PRIV
-    echo $EX005_SG_ENDPOINT
-    echo $EX005_SUBNET_PUB
-    echo $EX005_SUBNET_PRIV
-    echo $EX005_VPC
+    export | grep EX005
+    
+Output 
+
+.. code-block::
+   
+   declare -x EX005_INST_PRIV="i-XXXXXXXXXXXX"
+   declare -x EX005_INST_PUB="i-XXXXXXXXXXXX"
+   declare -x EX005_IP_NAT="XXX.XXX.XXX.XXX"
+   declare -x EX005_IP_PUBLIC="XXX.XXX.XXX.XXX"
+   declare -x EX005_RTB_PRIV="rtb-XXXXXXXX"
+   declare -x EX005_SG_ENDPOINT="sg-XXXXXXXX"
+   declare -x EX005_SUBNET_PRIV="subnet-XXXXXXXX"
+   declare -x EX005_SUBNET_PUB="subnet-XXXXXXXX"
+   declare -x EX005_VPC="vpc-XXXXXXXX"
+
 
 Verify package installation
 ---------------------------
 
 Instance ('public')
 ~~~~~~~~~~~~~~~~~~~
-Run the following command to connect the 'public' Instance. 
+Run the following command to connect the 'public' Instance. Replace acpkey1.pem with the local path to your pem
 
 .. code-block::
 
@@ -421,11 +438,17 @@ Run the following command to verify that 'awscli' is installed (version should b
 
     aws --version
 
-    Type 'exit' to exit the ssh session.
+Output
+
+.. code-block::
+
+   aws-cli/1.15.47 Python/3.5.2 Linux/4.4.0-1060-aws botocore/1.10.47
+
+Type 'exit' to exit the ssh session.
 
 Instance ('private')
 ~~~~~~~~~~~~~~~~~~~
-Run the following command to connect the 'private' Instance. 
+Run the following command to connect the 'private' Instance. Replace acpkey1.pem with the local path to your pem
 
 .. code-block::
 
@@ -437,11 +460,17 @@ Run the following command to verify that 'awscli' is installed (version should b
 
     aws --version
 
-    Type 'exit' to exit the ssh session.
+Output
+
+.. code-block::
+
+   aws-cli/1.15.47 Python/3.5.2 Linux/4.4.0-1060-aws botocore/1.10.47
+
+Type 'exit' to exit the ssh session.
 
 Disassociate Elastic IP
 -----------------------
-Now that you have verified that awscli is installed on both Instances, use the following awscli command to disassociate the Elastic IP from the 'private' Instance.
+Now that you have verified that awscli is installed on both Instances, use the following awscli command to disassociate the Elastic IP from the 'private' Instance.  We're doing this so that we can release the NAT IP from the private instance and remove access from the Internet to it.  
 
 .. code-block::
 
@@ -449,7 +478,7 @@ Now that you have verified that awscli is installed on both Instances, use the f
 
 Delete Route
 ------------
-Now that you have verified that awscli is installed on both Instances, use the following awscli command to delete the default Route in the 'private' Route Table.
+Now that you have verified that awscli is installed on both Instances, use the following awscli command to delete the default Route in the 'private' Route Table.  This prevents the 'private' instance from reaching the Internet for now.
 
 .. code-block::
 
@@ -487,7 +516,7 @@ Output:
         ]
     }
 
-We can see that only one of the Elastic IPs is associated with an Instance.
+We can see that only one of the Elastic IPs is associated with an Instance, because only one has an AssociationId
 
 Environment variable
 ~~~~~~~~~~~~~~~~~~~~
@@ -501,6 +530,7 @@ Run the following commands to capture the 'AllocationId' for Elastic IPs.
 
 Sanity check
 ~~~~~~~~~~~~
+Once again, let's verify that the environment variables are set:
 
 .. code-block::
 
@@ -508,11 +538,11 @@ Sanity check
 
 Create NAT Gateway
 ------------------
-Use the following awscli command to create the **'NAT Gateway'**.
+Use the following awscli command to create the **'NAT Gateway'**. This creates a NAT gateway using the AllocationID of the NAT address that we disassociated with the 'private' instance and attaches the gateway to the 'Public' Subnet.
 
 .. code-block::
 
-    aws ec2 create-nat-gateway --allocation-id $EX005_EIP_NAT_ALLOC --subnet-id $EX005_SUBNET_PUB
+    aws ec2 create-nat-gateway --allocation-id  --subnet-id $EX005_SUBNET_PUB
 
 Output:
 
@@ -537,11 +567,11 @@ Notice that the 'State' is **'pending'**.
 
 Environment variable
 ~~~~~~~~~~~~~~~~~~~~
-Manually create the following environment variable.
+Use this command to create the following environment variable for the NAT Gateway Id
 
 .. code-block::
 
-    export EX005_NAT_GATEWAY=<NatGatewayId>
+    export EX005_NAT_GATEWAY=$(aws ec2 describe-nat-gateways --query 'NatGateways[*].[NatGatewayId, NatGatewayAddresses[?AllocationId==`$EX005_EIP_NAT_ALLOC`]]' --output text | grep nat-)
 
 
 Check the status of the Nat Gateway
@@ -582,7 +612,7 @@ Add a Route
 -----------
 Even though we added a Nat Gateway, there is no Route that directs traffic to it.
 
-Use the following awscli command to add a default Route to the 'private' Route Table.
+Use the following awscli command to re-add a default route (destination 0.0.0.0/0) to the 'private' Route Table that sends outbound traffic to the NAT Gateway
 
 .. code-block::
 
@@ -615,7 +645,7 @@ Since we will need access to the above value from the 'public' Instance, an envi
 
 Instead, we are going to the **'Parameter store'**, which is part of the **'AWS Systems Manager'**, to store the value of the 'private' IP address of the 'private' instance.
 
-Use the following awscli command to collect and store the 'private' IP address of the 'private' Instance.
+Use the following awscli command to collect and store the 'private' IP address of the 'private' Instance.  This multi-part command retrieves the private IP address of the 'private' instance and puts it into the parameter store with the name 'Ex005-PrivInstancePrivIP'
 
 .. code-block::
 
@@ -628,16 +658,37 @@ Output:
     {
         "Version": 1
     }
+    
+We can verify that the value was saved to the parameter store by running the following command:
+
+.. code-block::
+
+   aws ssm describe-parameters --filter "Key=Name,Values=Ex005-PrivInstancePrivIP"
+   
+Output
+
+.. code-block::
+
+   {
+      "Parameters": [
+           {
+               "LastModifiedUser": "arn:aws:iam::269847117696:user/apiuser01",
+               "LastModifiedDate": 1530201422.64,
+               "Version": 1,
+               "Type": "String",
+               "Name": "Ex005-PrivInstancePrivIP"
+           }
+       ]
+   }
+
 
 Instance ('public')
 -------------------
-In order to access the **'Parameter store'** from the 'public' Instance, we will need to run an 'awscli' command. We verified that the 'awscli' was installed on both Instances in a previous step.
-
-Before we can use the 'awscli' on the 'public' Instance, we must configure it. We are only going to configure the 'region' and NOT the credentials. We will use another method for that.
+We verified that the 'awscli' was installed on both Instances in a previous step, but in order to access the **'Parameter store'** from the 'public' Instance, we will need to configure awscli. Unlike our local machine, we are only going to configure the 'region' and NOT the credentials. We will use another method for that.
 
 Key file
 ~~~~~~~~
-First we need to copy the **Private Key** file to the 'public' Instance. Use the following command to do that.
+First we need to copy the **Private Key** file to the 'public' Instance. Remember, this keypair is necessary in order to ssh into any of our instances.  Use the following command to do that.
 
 .. code-block::
 
@@ -645,7 +696,7 @@ First we need to copy the **Private Key** file to the 'public' Instance. Use the
 
 Connect
 ~~~~~~~
-Next we need to connect to the 'public' Instance. Run the following command to do that.
+Next we need to ssh into the 'public' Instance. Run the following command to do that.
 
 .. code-block::
 
@@ -672,7 +723,7 @@ Output:
 
 Test
 ~~~~
-Use the following awscli command to test our configuration.
+Use the following awscli command to test our configuration.  Remember that we are running this command on our 'public' instance.
 
 .. code-block::
 
@@ -686,7 +737,6 @@ Output:
 
 Type 'exit' to exit the ssh session.
 
-
 Add a Role
 ----------
 Now we are going to add the 'Role' we created at the beginning of this exercise to both Instances.
@@ -696,7 +746,7 @@ Instance ('public')
 
 .. code-block::
 
-    aws ec2 associate-iam-instance-profile --instance-id $EX005_INST_PUB --iam-instance-profile Name=Ec2AccessForInstances
+    aws ec2 associate-iam-instance-profile --instance-id $EX005_INST_PUB --iam-instance-profile Name=EC2AccessForInstances
 
 Output:
 
@@ -719,7 +769,7 @@ Instance ('private')
 
 .. code-block::
 
-    aws ec2 associate-iam-instance-profile --instance-id $EX005_INST_PRIV --iam-instance-profile Name=Ec2AccessForInstances
+    aws ec2 associate-iam-instance-profile --instance-id $EX005_INST_PRIV --iam-instance-profile Name=EC2AccessForInstances
 
 Output:
 
@@ -739,6 +789,7 @@ Output:
 
 Sanity check
 ~~~~~~~~~~~~
+Use this command to verify that the Instances have been associated with the InstanceProfile Role
 
 .. code-block::
 
@@ -778,7 +829,7 @@ Instance ('public')
 
 Connect
 ~~~~~~~
-Next we need to connect to the 'public' Instance. Run the following command to do that.
+Next we need to reconnect to the 'public' Instance. Run the following command to do that.
 
 .. code-block::
 
@@ -786,7 +837,7 @@ Next we need to connect to the 'public' Instance. Run the following command to d
 
 Test
 ~~~~
-Use the following awscli command to check that we can now access the **'Parameter store'**.
+Use the following awscli command to check that we can now access the **'Parameter store'**.  Notice we're not getting an error regarding credentials.
 
 .. code-block::
 
@@ -812,6 +863,7 @@ Instance ('private')
 
 Connect
 ~~~~~~~
+While still in the ssh session to the 'public' instance, we need to connect to the 'private' instance.  Notice, we're using the aws ssm get-parameter command to retrieve the Private Instance's Private IP address in order to connect.
 
 .. code-block::
 
@@ -821,7 +873,7 @@ Configure
 ~~~~~~~~~
 Next we need to configure the 'awscli'. 
 
-**We will only configure the 'region' and leave everything else blank.**
+**Just like above, we will only configure the 'region' and leave everything else blank.**
 
 .. code-block::
 
@@ -856,7 +908,9 @@ Output:
         ]
     }
 
-When we run 'awscli ec2' commands, we are connecting to the public **'Endpoint'** for EC2, through the **'NAT Gateway'**.
+Notice that we did not receive an error regardin credentials because we added both instances to the IAM role.
+
+When we run 'awscli ec2' or curl commands, we are connecting to the public **'Endpoint'** for EC2, through the **'NAT Gateway'**.
 
 Type 'exit' twice to exit both ssh sessions.
 
@@ -865,10 +919,13 @@ Create an Endpoint
 Instead of accessing the public **'Endpoint'**, we can create our own VPC **'Endpoint'** that doesn't require our API calls to EC2 to leave the AWS network.
 
 Use the following awscli command to create a VPC Endpoint. 
+**David** - Looks like service-name is region-specific; adding a envvar for it.  May need to explain what the endpoint type and service do though.
 
 .. code-block::
 
-    aws ec2 create-vpc-endpoint --vpc-endpoint-type Interface --vpc-id $EX005_VPC --service-name com.amazonaws.us-east-1.ec2 --subnet-ids $EX005_SUBNET_PRIV --no-private-dns-enabled --security-group-ids $EX005_SG_ENDPOINT
+   export EX005_VPC_EP_SVC=$(aws ec2 describe-vpc-endpoint-services --query 'ServiceDetails[?ends_with(ServiceName, `ec2`) == `true`].ServiceName' --output text)   
+
+    aws ec2 create-vpc-endpoint --vpc-endpoint-type Interface --vpc-id $EX005_VPC --service-name $EX005_VPC_EP_SVC --subnet-ids $EX005_SUBNET_PRIV --no-private-dns-enabled --security-group-ids $EX005_SG_ENDPOINT
 
 Output:
 
@@ -913,7 +970,7 @@ Output:
 Notes
 ~~~~~
     
-    We only created this Endpoint EC2
+    We only created this Endpoint on EC2
     We used the **'--no-private-dns-enabled'** option, so we will have to use the public 'DnsName' identified in the output above.
 
 DNS Name
