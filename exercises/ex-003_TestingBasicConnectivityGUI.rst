@@ -1,9 +1,9 @@
-ex-003: Testing basic connectivity
+ex-003: Testing basic connectivity from the AWS Management Console
 ==================================
 
 Status
 ------
-Version 1.2 (6/27/18)
+Version 1.0 (6/28/18)
 
 Dependencies
 ------------
@@ -90,164 +90,57 @@ We'll create a Security Group will be applied to the Instances created later in 
 4. In the 'Create Security Group' window, set the following values:
       * Security Group Name: Int2Public
       * Description: Security Group for Instances
-      * VPC: Select your VPC
+      * VPC: Select the EX002_VPC
 5. Under Security Group Rules, select the 'Inbound' tab and click 'Add Rule'  
 6. In the Rule definition row, set the following values: 
       * Type: SSH (this sets protocol to TCP and port to 22)
       * Source: Anywhere (or My IP)
       * Description: Allow SSH inbound
+7. Click **Create**
    
-
-
-Amazon Machine Image (AMI)
---------------------------
-We are going to use the following AMI, but the **'imageIds'**, for that AMI, are different for each region:
-
-``Ubuntu Server 16.04 LTS (HVM), SSD Volume Type``
-
-Use the following table to identify the **'imageId'** for your region.
-
-.. list-table::
-   :widths: 25, 25, 25, 25, 25, 25
-   :header-rows: 0
-
-   * - **Region**
-     - **ImageId**
-     - **Region**
-     - **ImageId**
-     - **Region**
-     - **ImageId**
-   * - us-east-1
-     - ami-a4dc46db
-     - us-east-2
-     - ami-6a003c0f
-     - us-west-1
-     - ami-8d948ced
-   * - us-west-2
-     - ami-db710fa3
-     - ca-central-1
-     - ami-7e21a11a
-     - eu-west-1
-     - ami-58d7e821
-   * - eu-west-2
-     - ami-5daa463a
-     - eu-west-3
-     - ami-1960d164
-     - eu-central-1
-     - ami-c7e0c82c
-   * - ap-northeast-1
-     - ami-48a45937
-     - ap-northeast-2
-     - ami-f030989e
-     - ap-southeast-1
-     - ami-81cefcfd
-   * - ap-southeast-2
-     - ami-963cecf4
-     - ap-south-1
-     - ami-41e9c52e
-     - sa-east-1
-     - ami-67fca30b
-
-Environment Variable
-~~~~~~~~~~~~~~~~~~~~
-Create an environment variable using your ImageId.
-
-.. code-block::
-
-    export EX003_IMAGE_ID=<ImageId>
-
 Launch an Instance
 -------------------
-Use the following awscli command to launch an Instance and attach it to the **public** Subnet. From here onwards, we will refer to this Instance as the **public** Instance.
+1. On the left-side menu, select **Instances**
+2. Click **Launch Instance**
+3. At the 'Choose an Amazon Machine Image (AMI)' step, check the **Free tier only** check box on the left and select the 'Quick Start' tab.
+4. Click **select** beside ``Ubuntu Server 16.04 LTS (HVM), SSD Volume Type``
+5. At the 'Choose and Instance Type step, select **t2.micro** and click **Next: Configure Instance Details**
+6. At the 'Configure Instance Details step, set the following values and click **Next: Add Storage**:
+      * Network: EX002_VPC
+      * Subnet: public
+      * Everything else: default
+7. At the 'Add Storage' step, make no changes and click **Next: Add Tags**
+8. At the 'Add Tags' step, click **Add Tag**, enter the following, then click **Next: Configure Security Group**
+      * Key: Name
+      * Value: public
+9. At the Configure Security Group step, choose **Select and existing Security Group** the select the Int2Public security group.  Its inbound rules, allowing SSH are displayed
+10. Click **Review and Launch**, then **Launch**
+11. At the 'Select and existing key pair or create a new key pair' window, select your keypair, check the 'I acknowledge..." box and click **Launch Instances**
+12.  Click **View Instances** to watch the creation status.
+      
+Launch another Instance
+-------------------
+1. While stil in the Instances console
+2. Click **Launch Instance**
+3. At the 'Choose an Amazon Machine Image (AMI)' step, check the **Free tier only** check box on the left and select the 'Quick Start' tab.
+4. Click **select** beside ``Ubuntu Server 16.04 LTS (HVM), SSD Volume Type``
+5. At the 'Choose and Instance Type step, select **t2.micro** and click **Next: Configure Instance Details**
+6. At the 'Configure Instance Details step, set the following values and click **Next: Add Storage**:
+      * Network: EX002_VPC
+      * Subnet: private
+      * Everything else: default
+7. At the 'Add Storage' step, make no changes and click **Next: Add Tags**
+8. At the 'Add Tags' step, click **Add Tag**, enter the following, then click **Next: Configure Security Group**
+      * Key: Name
+      * Value: private
+9. At the Configure Security Group step, choose **Select and existing Security Group** the select the Int2Public security group.  Its inbound rules, allowing SSH are displayed
+10. Click **Review and Launch**, then **Launch**
+11. At the 'Select and existing key pair or create a new key pair' window, select your keypair, check the 'I acknowledge..." box and click **Launch Instances**
+12.  Click **View Instances** to watch the creation status.
 
-Note: The only thing that makes it a **public** Subnet is the fact that it is associated with a Route Table that has a default Route to the Internet Gateway.
+Proceed when both instances have an Instance State of 'running'
 
-We have used the **'--client-token'** option to demonstrate how some commands, that are not naturally idempotent, are made to be so.
 
-- `More information on Idempotency <https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Run_Instance_Idempotency.html>`_
-
-**If you are using a different Key Pair, then replace 'acpkey1' with your '<key-pair-name>'**.
-
-.. code-block::
-
-    aws ec2 run-instances \
-        --image-id $EX003_IMAGE_ID \
-        --instance-type t2.micro \
-        --key-name acpkey1 \
-        --subnet-id $EX003_SUBNET_PUB \
-        --security-group-ids $EX003_SG \
-        --client-token awscertprep-ex-003-001
-
-Additional information for the above parameters:
-
-.. list-table::
-   :widths: 50, 50
-   :header-rows: 0
-
-   * - **Parameter**
-     - **Description**
-   * - '--image-id $EX003_IMAGE_ID'
-     - Specifies what **AMI** to use
-   * - '--instance-type t2.micro'
-     - Specifies the **Instance-type**, which in turn defines the number of vCPUs, the amount of memory, the size and type of storage, network performance, etc...
-   * - '--key-name acpkey1'
-     - Specifies which **Key Pair** to use for remote access to the Instance.   
-   * - '--subnet-id $EX003_SUBNET_PUB'
-     - Specifies which **subnet** to connect the Instance to. 
-   * - '--security-group-ids $EX003_SG'
-     - Specifies which **Security Group** to use for controlling access to the Instance.
-   * - '--client-token awscertprep-ex-003-001'
-     - Specifies an arbitrary **Token**, to be used to make this an idempotent operation.  
-
-Output:
-
-.. code-block::
-
-    {
-        ...output excluded due to size...
-    }
-
-Environment variable
-~~~~~~~~~~~~~~~~~~~~
-In the output of the run-instances command, you'll find the **'InstanceId'**.
-
-.. code-block::
-
-    export EX003_INST_PUB=<InstanceId>
-
-Launch a second Instance
-------------------------
-Use the following awscli command to launch an Instance and attach to the **'private'** Subnet.
-
-Note: The **private** Subnet is implicitly associated with the main Route Table, which does NOT have a Route to the Internet Gateway. Also, notice that we're adding both instances to the same security group
-
-**If you are using a different Key Pair, then replace 'acpkey1' with your '<key-pair-name>'**.
-
-.. code-block::
-
-    aws ec2 run-instances \
-        --image-id $EX003_IMAGE_ID \
-        --instance-type t2.micro \
-        --key-name acpkey1 \
-        --subnet-id $EX003_SUBNET_PRIV \
-        --security-group-ids $EX003_SG \
-        --client-token awscertprep-ex-003-005
-
-Output:
-
-.. code-block::
-
-    {
-        ...output excluded due to size...
-    }
-
-Environment variable
-~~~~~~~~~~~~~~~~~~~~
-In the output of the run-instances command, you'll find the **'InstanceId'**.
-
-.. code-block::
-
-    export EX003_INST_PRIV=<InstanceId>
 
 Private IP address
 ------------------
