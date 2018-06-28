@@ -980,14 +980,14 @@ Copy the DNS specified in the output above.
 Environment Variable
 ~~~~~~~~~~~~~~~~~~~~
 export EX005_ENDPOINT=<VpcEndpointId>
-export EX005_ENDPOINT=vpce-08994fcde67df4657
+
 
 Delete a Route
 --------------
 Use the following awscli command to delete the default Route that targets in Nat Gateway in the 'private' Route Table. This will prevent us from getting to public Endpoint for EC2.
 
 .. code-block::
-
+    
     aws ec2 delete-route --destination-cidr-block 0.0.0.0/0 --route-table-id $EX005_RTB_PRIV
 
 Instance ('public')
@@ -995,7 +995,7 @@ Instance ('public')
 
 Connect
 ~~~~~~~
-Next we need to connect to the 'public' Instance. Run the following command to do that.
+Next we need to connect to the 'public' Instance in order to connect to the 'private' instance. Run the following command to do that.
 
 .. code-block::
 
@@ -1008,23 +1008,24 @@ Instance ('private')
 
 Connect
 ~~~~~~~
+From the ssh session on the 'public' instance, run this to connect to the private instance:
 
 .. code-block::
 
     ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@$(aws ssm get-parameter --name Ex005-PrivInstancePrivIP --output text --query Parameter.Value)
 
-test
+Test
 ~~~~
 
 .. code-block::
 
     aws ec2 describe-regions --region-names us-east-1
 
-    Command will hang. 'cntrl-c' quit. 
+    Command will hang. 'ctrl-c' quit. 
 
 .. code-block::
 
-    aws ec2 describe-regions --region-names us-east-1 --endpoint-url https://<your-dns-name>
+    aws ec2 describe-regions --region-names us-east-1 --endpoint-url https://<dns name from endpoint>
 
 Output:
 
@@ -1038,6 +1039,10 @@ Output:
             }
         ]
     }
+
+Type 'exit' twice to disconnect the 'private' and 'public' ssh sessions.
+
+If you want to, you can also set the endpoint url in the paramter store are retrieve it, rather than pasting it in.
 
 Cleanup
 -------
@@ -1105,6 +1110,7 @@ Output:
         "Unsuccessful": []
     }
 
+This is expected to return unsuccessful because the vpc endpoint should have already been deleted as part of the gateway deletion
 
 Stack
 ~~~~~
@@ -1113,10 +1119,11 @@ Stack
 
     aws cloudformation delete-stack --stack-name ex-005
 
+This has not output, but run this command to confirm that the stack gets deleted
 
 .. code-block::
 
-    aws cloudformation describe-stack --stack-name ex-005
+    aws cloudformation describe-stacks --stack-name ex-005
 
 Output:
 
@@ -1146,13 +1153,21 @@ Output:
     An error occurred (ValidationError) when calling the DescribeStacks operation: Stack with id ex-005 does not exist
 
 
-
 Summary
 -------
-- We created a VPC.
-- We created a second Route Table and Tagged it 'public'
-- We created an Internet Gateway.
-- We attached the Internet Gateway to the VPC.
+- We added permissions to a user account and created an instance role
+- We created a VPC via template
+- We configured the aws cli on both instances
+- We disassociated the EIP with the private address
+- We removed the default route for the private subnet
+- We created a NAT gateway
+- We added a new default route for the private subnet that uses our NAT gateway
+- We saved the private IP address to the parameter store
+- We assigned our instances to the instance role
+- We created a VPC Endpoint
+- We removed the default route for the private subnet again
+- We confirmed that the private Instance cannot use the public endpoint, but can use our new VPC endpoint to run aws cli commands
+- We deleted the VPC and related objects.
 - We created a Default Route that targeted the Internet Gateway in the 'public' Route Table.
 - We created two Subnets and Tagged them 'public' and 'private', respectively.
 - We associated the 'public' Subnet with the 'public' Route Table.
