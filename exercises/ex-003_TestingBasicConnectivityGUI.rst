@@ -136,123 +136,50 @@ Launch another Instance
 9. At the Configure Security Group step, choose **Select and existing Security Group** the select the Int2Public security group.  Its inbound rules, allowing SSH are displayed
 10. Click **Review and Launch**, then **Launch**
 11. At the 'Select and existing key pair or create a new key pair' window, select your keypair, check the 'I acknowledge..." box and click **Launch Instances**
-12.  Click **View Instances** to watch the creation status.
+12. Click **View Instances** to watch the creation status.
 
-Proceed when both instances have an Instance State of 'running'
+Once both instances are in the 'running' state, proceed to the next steps
 
 
-
-Private IP address
-------------------
-Use the following awscli command to collect the IP address of the Instance on the **'private'** Subnet.
-
-Note: you will type this address in a ssh session, so jot it down.
-
-.. code-block::
-    
-    aws ec2 describe-instances \
-        --instance-ids $EX003_INST_PRIV \
-        --output text \
-        --query Reservations[*].Instances[*].NetworkInterfaces[*].PrivateIpAddress
-
-Output:
-
-.. code-block::
-    
-    xxx.xxx.xxx.xxx
-
-Using the **'--query Reservations[*].Instances[*].NetworkInterfaces[*].PrivateIpAddress'** parameter, dictates that only the value of **'PrivateIpAddress'** should be returned. Using the **'--output text'** parameter, dictates that result should be text and not the default json. 
-
-Allocate an Elastic IP
+Allocate and associate an Elastic IP
 ----------------------
-Now we need to allocate an Elastic IP (public IPv4 address). In the next step, we will associate it with the **public** Instance, so we can connect to it.
+In order to connect to our instance, we'll need a public IPv4 address (a.k.a Elastic IP).  First, we'll allocate an IP for our account, then we'll associate it with our 'public' instance.
 
-Note: This step and the next could have been handled as part of the **run-instances** command, by using the **'--associate-public-ip-address'** option.
+1. Under the **Services** menu, select **EC2** under *Compute*
+2. On the left-side menu, select **Elastic IPs** under NETWORK & SECURITY
+3. Click **Allocate new address**, then **Allocate**, then **Close**
+4. Select the new Elastic IP from the list and choose **Associate Address** from the 'Actions' menu
+5. On the 'Associate Address; step, set the following, click **Associate** and then **Close**
+      * Resource type: Instance
+      * Instance: 'public'
+      * Private IP: <private IP> (10.0.0.x)
+6. Notice now that the Elastic IP has additional information regarding the instance and Private IP address
+7. Make a note of the Elastic IP address
 
-Use the following awscli command to allocate an Elastic IP.
-
-.. code-block::
-
-    aws ec2 allocate-address --domain vpc
-
-Output:
-
-.. code-block::
-
-    {
-        "PublicIp": "xxx.xxx.xxx.xxx",
-        "AllocationId": "eipalloc-xxxxxxxxxxxxxxxxx",
-        "Domain": "vpc"
-    }
-
-Environment variable
-~~~~~~~~~~~~~~~~~~~~
-Set a couple of environment variables using the output above.
-
-.. code-block::
-
-    export EX003_EIP=<AllocationId>
-    export EX003_PUB_IP=<PublicIp>
-
-Associate the Elastic IP
-------------------------
-Use the following awscli command to associate the Elastic IP with the **public** Instance.
-
-.. code-block::
-
-    aws ec2 associate-address --allocation-id $EX003_EIP --instance-id $EX003_INST_PUB
-
-Output:
-
-.. code-block::
-
-    {
-        "AssociationId": "eipassoc-xxxxxxxxxxxxxxxxx"
-    }
-
-Confirm Association
--------------------
-Run the following awscli command to verify that the Elastic IP has been associated with an instance.
-
-.. code-block::
-
-    aws ec2 describe-addresses
-
-Output:
-
-.. code-block::
-
-    {
-        "Addresses": [
-            {
-                "Domain": "vpc",
-                "InstanceId": "i-xxxxxxxxxxxxxxxxxx",
-                "NetworkInterfaceId": "eni-xxxxxxxx",
-                "AssociationId": "eipassoc-xxxxxxxx",
-                "NetworkInterfaceOwnerId": "xxxxxxxxxxxx",
-                "PublicIp": "xxx.xxx.xxx.xxx",
-                "AllocationId": "eipalloc-xxxxxxxx",
-                "PrivateIpAddress": "xxx.xxx.xxx.xxx"
-        }
-    ]
-}
 
 Test inbound connectivity
 -------------------------
 Use the following commands to test 'inbound' connectivity to the **public** Instance.
-
 **Expected results:** 'ping' should fail and 'ssh' should succeed.
+
+On your local workstation, open a terminal session or command prompt to run these connectivity tests:
+*  If you are using a different Key Pair, then replace 'acpkey1.pem' with your '<your-pem-file>'
+*  Replace '<Elastic IP address>' with the actual public IP for the Elastic IP address
 
 .. code-block::
 
-    ping $EX003_PUB_IP
-    ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@$EX003_PUB_IP
+    ping <Elastic IP address>
+    ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@<Elastic IP address>
 
 Note: If you are prompted with **"Are you sure you want to continue connecting (yes/no)?"**, that's a good thing! Enter 'y' and you'll be connected.
 
+*So, why did ssh work but ping did not?*
+Earlier, we created the Int2Public security group and assigned it to both instances.  This security group included one inbound rule that allowed SSH connections.  Everything else is blocked.  In addition, the public instance is attached to the 'public' subnet, which is associated with the 'public' route table.  The 'public' route table includes a default route that sends all non-local traffic to the Internet Gateway
+
+
 Test outbound connectivity
 --------------------------
-Use the following command to test 'outbound' connectivity from the **public** Instance.
+While still connect via ssh to the Elastic IP (assigned to the public instance), use the following command to test 'outbound' connectivity from the **public** Instance.
 
 **Expected results:** 'apt update' should succeed.
 
@@ -262,71 +189,80 @@ Use the following command to test 'outbound' connectivity from the **public** In
 
 Type 'exit' to close the ssh session to this instance
 
+*So, why did the apt update work?*  The Int2Public security group has a default Outbound rule that allows all traffic.
+
 Re-associate the Elastic IP
 ---------------------------
-Use the following awscli command to re-associate the Elastic IP with the **private** Instance.
+Let's move the Elastic IP to the 'private' instance and see the diferences
 
-.. code-block::
+1. Under the **Services** menu, select **EC2** under *Compute*
+2. On the left-side menu, select **Elastic IPs** under NETWORK & SECURITY
+3. Select the Elastic IP from the list and choose **Disassociate Address** from the 'Actions' menu, then click the **Disassociate address** button on the window that appears.
+3. Select the Elastic IP from the list and choose **Associate Address** from the 'Actions' menu
+5. On the 'Associate Address; step, set the following, click **Associate** and then **Close**
+      * Resource type: Instance
+      * Instance: 'private'
+      * Private IP: <private IP> (10.0.2.x)
+6. Notice now that the Elastic IP shows the 10.0.2.x Private IP address
+7. Make a note of the Elastic IP address - it should be the same as before since we did not release it
 
-    aws ec2 associate-address --allocation-id $EX003_EIP --instance-id $EX003_INST_PRIV
-
-Output:
-
-.. code-block::
-
-    {
-        "AssociationId": "eipassoc-xxxxxxxxxxxxxxxxx"
-    }
 
 Test inbound connectivity
 -------------------------
 Use the following commands to test connectivity to the **private** Instance.
-
 **Expected results:** Both 'ping' and 'ssh' should be fail.
 
+On your local workstation, open a terminal session or command prompt to run these connectivity tests:
+*  Replace '<Elastic IP address>' with the actual public IP for the Elastic IP address
+
 .. code-block::
 
-    ping $EX003_PUB_IP
-    ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@$EX003_PUB_IP
+    ping <Elastic IP address>
+    ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@<Elastic IP address>
 
-Re-associate the Elastic IP
+*Ok, so why does this instance not connect at all?*
+Although this instance is in the same security group with the same rules as the public instance, it is in the 'private' subnet, which is not associated with the 'public' route table.  As a result, there is no route for non-local traffic to reach this instance.
+
+
+Re-re-associate the Elastic IP
 ---------------------------
+Let's re-associate the Elastic IP back to the 'public' instance so we can connect again.
 Use the following awscli command to re-associate the Elastic IP with the **public** Instance.
 
+1. Under the **Services** menu, select **EC2** under *Compute*
+2. On the left-side menu, select **Elastic IPs** under NETWORK & SECURITY
+3. Select the Elastic IP from the list and choose **Disassociate Address** from the 'Actions' menu, then click the **Disassociate address** button on the window that appears.
+3. Select the Elastic IP from the list and choose **Associate Address** from the 'Actions' menu
+5. On the 'Associate Address; step, set the following, click **Associate** and then **Close**
+      * Resource type: Instance
+      * Instance: 'public'
+      * Private IP: <private IP> (10.0.0.x)
+6. Notice now that the Elastic IP shows the 10.0.0.x Private IP address
+7. Make a note of the Elastic IP address - it should be the same as before since we did not release it
+
+
+
+Reconnect via SSH
+-----------------
+Next, we need to reconnect to the public instance, but we also want to reach the private instance.  To reach the private instance, we'll 'hop' from the public instance - that is, we'll ssh from our local workstation to the public instance, then from the public instance to the private instance.  Just like you have to have the key pair on your local workstation in order to connect ssh to the public instance, the same key pair must be present on the public instance in order for it to connect to the private instance.
+
+On your local workstation, open a terminal session or command prompt to run these connectivity tests:
+*  If you are using a different Key Pair, then replace 'acpkey1.pem' with your '<your-pem-file>'
+*  Replace '<Elastic IP address>' with the actual public IP for the Elastic IP address
+
 .. code-block::
 
-    aws ec2 associate-address --allocation-id $EX003_EIP --instance-id $EX003_INST_PUB
-
-Output:
-
-.. code-block::
-
-    {
-        "AssociationId": "eipassoc-xxxxxxxxxxxxxxxxx"
-    }
-
-Reconnect
--------
-Use the following commands to:
-
-    - Copy the '.pem' file to **public** Instance. We will need this to connect from the **public** Instance to the **private** Instance. 
-    - Reconnect to the **public** Instance.
-
-**If you are using a different Key Pair, then replace 'acpkey1.pem' with your '<your-pem-file>'**.
-
-
-.. code-block::
-
-    scp -i acpkey1.pem acpkey1.pem ubuntu@$EX003_PUB_IP:/home/ubuntu
-    ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@$EX003_PUB_IP
+    scp -i acpkey1.pem acpkey1.pem ubuntu@<Elastic IP address>:/home/ubuntu
+    ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@<Elastic IP address>
 
     Do NOT 'exit'
+    
+On Windows, you may want to use WinSCP to transfer the pem and putty to connect.    
 
-Test local connectivity
+Test inbound connectivity
 -----------------------
-You should still be connected to the **public** Instance.
+You should still be connected to the **public** instance via SSH to the Elastic IP.
 
-Use the following commands to test connectivity to the **private** Instance.
 
 **Expected results:** 'ping' should fail and 'ssh' should succeed.
 
@@ -337,9 +273,11 @@ Use the following commands to test connectivity to the **private** Instance.
 
 You are now connected to the **private** Instance, through the **public** instance.
 
+Again, the security group is allowing SSH from anywhere and the private instance's route table has a default route for all traffic in our VPC.
+
 Test outbound connectivity
 --------------------------
-Use the following command to test oubound connectivity from the Instance in the private Subnet.
+While still in the ssh session on the 'private' instance, use the following command to test oubound connectivity from the Instance in the private Subnet.
 
 **Expected results** 'apt update' should fail.
 
@@ -351,36 +289,43 @@ Use the following command to test oubound connectivity from the Instance in the 
 
 Type 'exit' twice to close the ssh session for both Instances.
 
-The private subnet has no inbound or outbound path to the Internet. In a later exercise, we will create a **NAT Gateway** to allow for outbound connectivity for private Subnet to the Internet.
+So why did apt update fail?  Once again, the security group would allow the outbound traffic, but the private subnet has no inbound or outbound path to the Internet. In a later exercise, we will create a **NAT Gateway** to allow for outbound connectivity for private Subnet to the Internet.
+
 
 Add a rule to the Security Group
 --------------------------------
-Use the following awscli command to create a new rule to the above security group. This rule enables the icmp protocol from anywhere.
+Use the following awscli command to create a new rule to the Int2Public security group. This rule enables the icmp protocol from anywhere.
 
-Note: the command requires the 'port' parameter - AWS document has this to say:
+1. Under the **Services** menu, select **EC2** under *Compute*
+2. On the left-side menu, select **Security Groups** under NETWORK & SECURITY
+3. From the list of security groups, select 'Int2Public'
+4. In the bottom part of the page, select the 'Inbound' tab
+5. On the 'inbound' tab, click the **Edit** button
+6. On the 'Edit inbound rules', click **Add Rule**
+7. In the new row, set the following:
+      * Type: 'All ICMP - IPv4'  - this sets the protocol to ICP and the port range to 0-65535
+      * Source: 'Anywhere'
+      * Description: Allow ICMP
+8. Click **Save**
 
-    For ICMP: A single integer or a range (type-code ) representing the ICMP type number and the ICMP code number respectively. A value of -1 indicates all ICMP codes for all ICMP types. A value of -1 just for type indicates all ICMP codes for the specified ICMP type.
 
-.. code-block::
-
-    aws ec2 authorize-security-group-ingress --group-id $EX003_SG --protocol icmp --port -1 --cidr 0.0.0.0/0
-
-Test connectivity
------------------
+Test inbound connectivity
+-------------------------
 Use the following commands to test connectivity to the **public** Instance.
-
-**Expected results:** 'ping' and 'ssh' should now succeed.
+**Expected results:** Both 'ping' and 'ssh' should be fail.
+On your local workstation, open a terminal session or command prompt to run these connectivity tests:
 
 .. code-block::
 
-    ping $EX003_PUB_IP
-    ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@$EX003_PUB_IP
+    ping <Elastic IP address>
+    ssh -i acpkey1.pem -o ConnectTimeout=5 ubuntu@<Elastic IP address>
 
-You are now connected to the **public** Instance.
+*Ok, so what's different?*
+We've updated the security group to allow ICMP (ping)
 
-Test local connectivity
+Test public-to-private connectivity
 -----------------------
-You should still be connected to the **public** Instance.
+You should still be connected via ssh to the **public** Instance.
 
 Use the following command to test connectivity to the **private** Instance. 
 
@@ -392,78 +337,29 @@ Use the following command to test connectivity to the **private** Instance.
 
 Type 'exit' to disconnect to close the ssh session.
 
-Terminate Instances
--------------------
-Use the following awscli command to terminate both instances.
+Clean up - Terminate Instances
+------------------------------
+1. Under the **Services** menu, select **EC2** under *Compute*
+2. On the left-side menu, select **Instances**
+3. Select the 'public' and 'private' instances, choose **Instance State | Terminate** from the 'Actions' menu, then **Yes Terminate**
 
-.. code-block::
+Clean Up - Release Elastic IP
+-----------------------------
+1. On the left-side menu, select **Elastic IPs** under 'NETWORK & SECURITY'
+2. Select the Elastic IP, choose **Release Address** from the 'Action' menu, then **Release**
 
-    aws ec2  terminate-instances --instance-ids $EX003_INST_PUB $EX003_INST_PRIV
+Clean Up - Delete the Security Group
+------------------------------------
+1. On the left-side menu, select **Security Groups** under 'NETWORK & SECURITY'
+2. Select the **Int2Public** security group, choose **Delete Security Group** from the 'Actions' menu
+3. Select the 'EX002_VPC' VPC and choose **Delete VPC** from the 'Actions' menu, then **Yes, Delete**
 
-Examine the current state. Both should show a **'currentState'** of **'shutting-down'**.
-
-This operation is idempotent. Rerun the command until you see a **'currentState'** of **'terminated'**.
-
-Output:
-
-.. code-block::
-
-    {
-        "TerminatingInstances": [
-            {
-                "CurrentState": {
-                    "Code": 32,
-                    "Name": "shutting-down"
-                },
-                "InstanceId": "i-xxxxxxxxxxxxxxxxx",
-                "PreviousState": {
-                    "Code": 16,
-                    "Name": "running"
-                }
-            },
-            {
-                "CurrentState": {
-                    "Code": 32,
-                    "Name": "shutting-down"
-                },
-                "InstanceId": "i-xxxxxxxxxxxxxxxxx",
-                "PreviousState": {
-                    "Code": 16,
-                    "Name": "running"
-                }
-            }
-        ]
-    }
-
-Release the Elastic IP
-----------------------
-Use the following awscli command to release the Elastic IP.
-
-Recall that leaving it allocated, but unassigned will incur a charge.
-
-NOTE: The associated instance will have to complete its termination in order for the Elastic IP to not be **"In use"** and available for release
-
-.. code-block::
-
-    aws ec2 release-address --allocation-id $EX003_EIP
-
-Delete the Security Group
+Clean Up - Delete the VPC
 -------------------------
-Use the following awscli command to delete the Security Group.
+1. Under the **Services** menu, select **VPC** under *Network & Content Delivery*
+2. On the left-side menu, select **Your VPCs**
+3. Select the **EX002_VPC** VPC, choose **Delete VPC** from the 'Actions' menu, then **Yes, Delete**
 
-.. code-block::
-
-    aws ec2 delete-security-group --group-id $EX003_SG
-
-Delete the VPC
---------------
-Use the following awscli command to delete the VPC.
-
-This will delete the VPC itself, plus the Subnets, Route Tables and Internet Gateway.
-
-.. code-block::
-
-    aws ec2 delete-vpc --vpc-id $EX003_VPC
 
 Summary
 -------
@@ -473,7 +369,7 @@ Summary
 - We allocated a Elastic IP.
 - We map/re-mapped that Elastic IP to Instances.
 - We tested connectivity to/from both the 'public' and 'private' Instances.
-- We terminated both Instance, released the Elastic IP, deleted the Security Group and the VPC (and associated components).
+- We terminated both Instances, released the Elastic IP, deleted the Security Group and the VPC (and associated components).
 
 **Note: we did NOT delete the Key Pair, keep the '.pem' file safe** 
 
