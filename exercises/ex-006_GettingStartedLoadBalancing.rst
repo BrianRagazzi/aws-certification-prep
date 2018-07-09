@@ -137,6 +137,10 @@ Explanation:
   - **!Select** lets us select the 1st (0) item in the list, for **SubnetWeb1** and the 2nd (1) for **SubnetWeb2**, ensuring that the two Subnets are on different AZs.
   - Every Region has at least two AZs, so this is Template is portable between Regions.
 
+More Information:
+
+We've used a few **Fn::** lines in the template that may look foreign.  For a list of all Intrinsic Functions available in CloudFormation Templates, please refer to this reference: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference.html
+
 **Notable item**
 
 We need a way to verify the Load-balancer is functioning properly. To accomplish this, we will create a simplistic web server. Python provides a simple HTTP server that can be started, without any configuration, in any directory. Redirecting the contents of '/etc/hostname' to 'index.html' allows us to tell the Web Servers apart. 
@@ -166,9 +170,6 @@ We need a way to verify the Load-balancer is functioning properly. To accomplish
                 - "sudo python3 -m http.server 80"
         DependsOn: DefaultRoutePublic
 
-      WebInstance2:
-
-        ... excluded for brevity ...
 
 Explanation:
 
@@ -295,6 +296,19 @@ Sanity check
 .. code-block::
     
     echo -e '\n'$EX006_SUBNET_WEB1'\n'$EX006_SUBNET_WEB2'\n'$EX006_SG_LB'\n'$EX006_VPC'\n'$EX006_INST_WEB1'\n'$EX006_INST_WEB2'\n'$EX006_SG_WEB
+
+Output:
+
+.. code-block::
+
+    subnet-2fd88c47
+    subnet-50e06d2a
+    sg-cdc08da7
+    vpc-31193a59
+    i-0c86ea5acd306fc85
+    i-0e83ba5dfb8b2abda
+    sg-9add90f0
+
 
 
 Create Application Load-balancer
@@ -483,7 +497,7 @@ Check Load-balancer status
 --------------------------
 Use the following awscli command to check the **'State:Code'** of the Load-balancer.
 
-Rerun this command until **'State:Code'** is **'active'**.
+Just like our Application load-balancer, rerun this command until **'State:Code'** is **'active'**.
 
 .. code-block::
 
@@ -542,6 +556,14 @@ Sanity check
 .. code-block::
     
     echo -e '\n'$EX006_APP_LB'\n'$EX006_NET_LB
+
+Output
+
+.. code-block::
+    
+    arn:aws:elasticloadbalancing:us-east-2:xxxxxxxxxxxx:loadbalancer/app/ex-006-app-lb/xxxxxxxxxxxxxxxx
+    arn:aws:elasticloadbalancing:us-east-2:xxxxxxxxxxxx:loadbalancer/net/ex-006-net-lb/xxxxxxxxxxxxxxxx
+
 
 Create Target Group for Application Load-balancer
 -------------------------------------------------
@@ -640,7 +662,7 @@ Sanity check
 
 Register Targets
 ----------------
-Targets can be registered to multiple Target Groups.
+At this point, we have defined target groups, but they have no target members yet.  This is done by registering instances to the target group with the command below.  Note that an instance (target) can be registered to multiple Target Groups, so we are registering both Web Instances to both the application load-balancer and the network load-balancer.
 
 Application Load-balancer
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -702,6 +724,9 @@ Output:
             }
         ]
     }
+    
+This indicates that the load-balancer is not ready for use yet.    
+    
 
 Network Load-balancer
 ~~~~~~~~~~~~~~~~~~~~~
@@ -891,7 +916,7 @@ Output:
         ]
     }
 
-You can see that **'State'** is **'healthy'**.
+Now that we've added listeners, you can see that **'State'** is **'healthy'**.
 
 Verify Application Load-balancer
 --------------------------------
@@ -910,6 +935,8 @@ Output:
 .. code-block::
 
     ex-006-app-lb-xxxxxxxxxx.us-east-1.elb.amazonaws.com
+
+Because we selected a 'public' load-balancer, it has been assigned a public DNS name
 
 Test connectivity
 ~~~~~~~~~~~~~~~~~
@@ -954,7 +981,7 @@ Using 'curl' or your browser test connectivity. Rerun/refresh a few times to mak
 
 Explanation of results
 ----------------------
-The Security Group that is applied to the Application Load-balancer allows HTTP (TCP port 80) from anywhere (0.0.0.0/0) and the Network Load-balancer does use Security Groups, so no issue there. 
+The Security Group that is applied to the Application Load-balancer allows HTTP (TCP port 80) from anywhere (0.0.0.0/0) and the Network Load-balancer does not use Security Groups, so no issue there. 
 
 .. code-block::
 
@@ -973,9 +1000,9 @@ The Security Group that is applied to the Application Load-balancer allows HTTP 
 
 The Security Group that is applied to the Web Servers only allows HTTP (TCP port 80) from inside the VPC (10.0.0.0/16).
 
-    The Application Load-balancer changes the source IP of packets it receives to it's private IP address, so those packets are not blocked by the Security Group rule.
+    The Application Load-balancer changes the source IP to its private IP address on packets that it forwards, so those packets are accepted and passed by the Security Group rule.
 
-    The Network Load-balancer does NOT change the source IP of packets it receives, so those packets are blocked by the Security Group rule.
+    The Network Load-balancer does NOT change the source IP of packets it forwards, so those packets are blocked by the Security Group rule.  Remember, the Security Group is applied to the instances, not to the network load-balancer.
 
 .. code-block::
 
@@ -1003,7 +1030,7 @@ Resolve the issue
 
 Add a rule
 ~~~~~~~~~~
-Let's add a rule to security group for the Web Servers that allows HTTP (TCP port 80) from anywhere (0.0.0.0/0)
+Let's add a rule to security group for the Web Servers that allows HTTP (TCP port 80) from anywhere (0.0.0.0/0).  Note that the API will not allow updating a security group rule definition, but will allow you to add and revoke the rules.
 
 .. code-block::
 
@@ -1026,9 +1053,10 @@ Using 'curl' or your browser test connectivity. Rerun/refresh a few times to mak
 Clean up
 --------
 
+DAVID:  The TGs were not deleted along with the LBs for me, so I've updated verbiage based on what I saw...
+
 Delete the Application Load-balancer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Deleting a Load-balancer with also delete the associated Target Group.
 
 .. code-block::
     
@@ -1036,11 +1064,18 @@ Deleting a Load-balancer with also delete the associated Target Group.
 
 Delete the Network Load-balancer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Deleting a Load-balancer with also delete the associated Target Group.
 
 .. code-block::
     
-    aws elbv2 delete-load-balancer --load-balancer-arn $EX006__NET_LB
+    aws elbv2 delete-load-balancer --load-balancer-arn $EX006_NET_LB
+
+Delete the Target Groups
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block::
+    
+    aws elbv2 delete-target-group --target-group-arn $EX006_APP_TG
+    aws elbv2 delete-target-group --target-group-arn $EX006_NET_TG
 
 Delete the Stack
 ----------------
@@ -1097,6 +1132,7 @@ Summary
 - We tested connectivity through the Application Load-balancer.
 - We tested connectivity through the Network Load-balancer.
 - We resolved an issue with connectivity through the Network Load-balancer.
+- We removed the resources we created
 
 Next steps
 ----------
